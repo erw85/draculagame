@@ -43,7 +43,7 @@ export default {
   },
 
   hint() {
-    return 'Climb out of the window. Tap stones without cracks, keep still when the wind rises, and tap the bats away before they reach you.';
+    return 'Climb out of the window. Tap stones without cracks, wait for the wind to pass, and tap the bats away before they reach you.';
   },
 
   rooms: {
@@ -55,7 +55,7 @@ export default {
           tap(g) {
             g.say('I took some of the gold, and climbed out over the sill into the wind. There is no way back.', () => {
               g.startChallenge(climb({
-                levels: 13, seed: 77, gustEvery: [4, 7], batEvery: [3, 5.5], crumbleChance: 0.6, target: 'ground',
+                levels: 10, seed: 77, gustEvery: [6, 9], batEvery: [5, 8], crumbleChance: 0.35, target: 'ground',
                 deathText: 'My grip failed, and the precipice took me. At its foot a man may sleep — as a man.',
                 onWin: (g) => {
                   g.sound.pack();

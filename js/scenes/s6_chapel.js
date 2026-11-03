@@ -142,7 +142,7 @@ export default {
           tap(g) {
             g.say('I scrambled out of the east window and onto the wall. The Count’s window lies below.', () => {
               g.startChallenge(climb({
-                levels: 7, seed: 8, gustEvery: [6, 9], batEvery: [5, 8], crumbleChance: 0.4, target: 'window',
+                levels: 6, seed: 8, gustEvery: [7, 10], batEvery: [6, 9], crumbleChance: 0.25, target: 'window',
                 deathText: 'The stone came away in my hand, and I fell from the castle wall into the abyss below.',
                 onWin: (g) => { g.goRoom('countroom'); g.say('I dropped through the window into the Count’s room. It was empty.'); },
               }));

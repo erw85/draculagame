@@ -12,7 +12,7 @@ export function climb(cfg) {
     gustEvery = [5, 8],
     batEvery = [4, 7],
     crumbleChance = 0.45,
-    grips: maxGrips = 3,
+    grips: maxGrips = 5,
     seed = 1,
     target = 'window', // 'window' or 'ground'
     deathText = 'My fingers slipped from the stone, and the abyss took me.',
@@ -68,7 +68,7 @@ export function climb(cfg) {
 
   return {
     peek: () => ({
-      moving: !!move, gust: gust.state, level,
+      moving: !!move, gust: gust.state, level, grips,
       next: nextHolds().map((h) => ({ x: h.x, y: h.y - camY, crumble: h.crumble })),
       bats: bats.filter((b) => !b.gone).map((b) => ({ x: b.x, y: b.y - camY })),
     }),
@@ -99,11 +99,11 @@ export function climb(cfg) {
       // Wind gusts: a warning, then a blast. Moving during the blast costs a grip.
       gust.t -= dt;
       if (gust.state === 'calm' && gust.t <= 0) {
-        gust = { state: 'warn', t: 1.1 };
+        gust = { state: 'warn', t: 2.0 };
         g.sound.gust();
         g.prompt('The wind is rising — hold still!');
       } else if (gust.state === 'warn' && gust.t <= 0) {
-        gust = { state: 'blow', t: 1.6 };
+        gust = { state: 'blow', t: 1.2 };
       } else if (gust.state === 'blow' && gust.t <= 0) {
         gust = { state: 'calm', t: gustEvery[0] + r() * (gustEvery[1] - gustEvery[0]) };
         g.prompt('Tap a glowing stone to climb down');
@@ -111,7 +111,7 @@ export function climb(cfg) {
 
       // Bats swoop in from the side; tap them before they reach you.
       batT -= dt;
-      if (batT <= 0 && !move) {
+      if (batT <= 0 && !move && gust.state === 'calm') {
         batT = batEvery[0] + r() * (batEvery[1] - batEvery[0]);
         const side = r() < 0.5 ? -1 : 1;
         bats.push({ x: side < 0 ? -20 : W + 20, y: jy - 30 + (r() - 0.5) * 120, side, t: 0, ph: 0, gone: false, vx: 0, vy: 0 });
@@ -122,7 +122,7 @@ export function climb(cfg) {
         if (b.gone) { b.x += b.vx * dt; b.y += b.vy * dt; b.vy -= 200 * dt; continue; }
         b.t += dt;
         const tx = jx, ty = jy - 40;
-        const sp = 95 + b.t * 30;
+        const sp = 55 + b.t * 12;
         const d = Math.hypot(tx - b.x, ty - b.y);
         b.x += ((tx - b.x) / d) * sp * dt;
         b.y += ((ty - b.y) / d) * sp * dt + Math.sin(b.t * 9) * 1.2;
@@ -137,32 +137,34 @@ export function climb(cfg) {
       const wy = y + camY;
       // bats first
       for (const b of bats) {
-        if (!b.gone && Math.hypot(b.x - x, b.y - camY - y) < 34) {
+        if (!b.gone && Math.hypot(b.x - x, b.y - camY - y) < 48) {
           b.gone = true; b.vx = (b.x < jx ? -1 : 1) * 200; b.vy = -100;
           g.sound.flap();
           return;
         }
       }
       if (move) return;
-      for (const h of nextHolds()) {
-        if (Math.hypot(h.x - x, h.y - wy) < 38) {
-          if (gust.state === 'blow') { lose(g, 'The wind tore at me as I let go — I nearly fell! I must wait for the gust to pass.'); return; }
-          if (h.crumble) {
-            g.sound.crumble();
-            const list = route[level + 1];
-            list.splice(list.indexOf(h), 1);
-            for (let i = 0; i < 8; i++) debris.push({ x: h.x, y: h.y, vx: (Math.random() - 0.5) * 80, vy: -Math.random() * 60 });
-            lose(g, 'The stone crumbled away beneath my hand! The mortar is rotten where the stone is cracked.');
-            return;
-          }
-          level++;
-          cur = h;
-          move = { fx: jx, fy: jy, tx: h.x, ty: h.y, t: 0 };
-          g.sound.scrape();
-          hint = 0;
-          return;
-        }
+      const near = nextHolds()
+        .map((h) => ({ h, d: Math.hypot(h.x - x, h.y - wy) }))
+        .filter((o) => o.d < 50)
+        .sort((a, b) => a.d - b.d)[0];
+      if (!near) return;
+      const h = near.h;
+      // Moving in the wind is refused rather than punished.
+      if (gust.state === 'blow') { shake = 0.25; g.sound.scrape(); g.prompt('Too windy to move — wait for the gust to pass'); return; }
+      if (h.crumble) {
+        g.sound.crumble();
+        const list = route[level + 1];
+        list.splice(list.indexOf(h), 1);
+        for (let i = 0; i < 8; i++) debris.push({ x: h.x, y: h.y, vx: (Math.random() - 0.5) * 80, vy: -Math.random() * 60 });
+        lose(g, 'The stone crumbled away beneath my hand! The mortar is rotten where the stone is cracked.');
+        return;
       }
+      level++;
+      cur = h;
+      move = { fx: jx, fy: jy, tx: h.x, ty: h.y, t: 0 };
+      g.sound.scrape();
+      hint = 0;
     },
 
     draw(ctx, t) {
@@ -202,10 +204,11 @@ export function climb(cfg) {
       ctx.font = '12px "IM Fell English", serif';
       ctx.fillStyle = 'rgba(230,220,240,.85)';
       ctx.textAlign = 'right';
-      ctx.fillText('Grip', W - 70, 92);
+      const x0 = W - 20 - (maxGrips - 1) * 15; // fit any number of grips on screen
+      ctx.fillText('Grip', x0 - 12, 92);
       for (let i = 0; i < maxGrips; i++) {
         ctx.fillStyle = i < grips ? '#d0283a' : 'rgba(80,60,70,.6)';
-        ctx.beginPath(); ctx.arc(W - 56 + i * 16, 88, 5.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x0 + i * 15, 88, 5.5, 0, Math.PI * 2); ctx.fill();
       }
       // depth meter
       ctx.textAlign = 'left';
@@ -224,8 +227,9 @@ function drawHold(ctx, x, y, crumble) {
   ctx.fillStyle = 'rgba(0,0,0,.5)';
   ctx.fillRect(x - 15, y + 5, 30, 3);
   if (crumble) {
-    ctx.strokeStyle = 'rgba(15,8,15,.9)'; ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.moveTo(x - 6, y - 6); ctx.lineTo(x - 2, y - 1); ctx.lineTo(x - 5, y + 4); ctx.moveTo(x + 7, y - 6); ctx.lineTo(x + 4, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(30,15,25,.35)'; ctx.fillRect(x - 15, y - 6, 30, 11);
+    ctx.strokeStyle = 'rgba(10,4,10,.95)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - 8, y - 6); ctx.lineTo(x - 2, y); ctx.lineTo(x - 6, y + 5); ctx.moveTo(x + 9, y - 6); ctx.lineTo(x + 3, y + 1); ctx.lineTo(x + 7, y + 5); ctx.stroke();
   }
 }
 
