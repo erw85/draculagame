@@ -12,11 +12,11 @@ and his escape down the castle wall.
 | Genre | Puzzle / point-and-click: tap hotspots, collect items, solve puzzles |
 | Scope | Act 1 only (Chapters I–IV) |
 | Protagonist | Follows the novel's narrators. Act 1 is all Jonathan's journal; Mina, Seward, Van Helsing and others come in later acts |
-| Tech | HTML5 web game for phone browsers, portrait layout, no app store |
+| Tech | HTML5 web game for phone browsers, portrait layout, no app store. Plain JavaScript modules, no build step |
 | Art | Drawn in code (Canvas + SVG): silhouettes, moonlight, fog, animated bats and wolves |
 | Story text | Short direct quotes from the novel, shown as journal pages |
 | Danger | The player can fail in some scenes. Failing shows a "death card" and restarts at a checkpoint |
-| Length | About 15–25 minutes, 6 scenes |
+| Length | About 15–25 minutes, 7 chapters (the original scene 6 was split in two: chapel, then the precipice) |
 | Extras | Generated sound and ambience (with mute); auto-save to the device |
 | Out of scope | Collectible journal UI, offline install (PWA), later acts, other narrators |
 
@@ -87,8 +87,8 @@ game but stay close to events in the book.
 
 ### 5. The Three Women. Chapter III end, 16 May
 - **Story:** Jonathan falls asleep in the forbidden wing and the three
-  vampire women come for him. The Count drives them off: *"Back, back, to
-  your own place!"*
+  vampire women come for him. The Count drives them off: *"Back, I tell you
+  all! This man belongs to me!"*
 - **Action:** a stealth/resist sequence. Jonathan pretends to sleep. Hold
   a finger on the screen to keep his eyes shut and resist; release to look
   through the lashes (he has to look to know when to move). Get back to
@@ -132,9 +132,9 @@ game but stay close to events in the book.
 
 ## Tech plan
 
-- **Stack:** TypeScript + Vite. The game draws on a single `<canvas>` with
-  a light HTML layer on top for text and the inventory. No heavy engine
-  needed for a point-and-click game.
+- **Stack:** plain JavaScript ES modules with no build step (simpler to host
+  than the TypeScript + Vite first planned). The game draws on a single
+  `<canvas>` with a light HTML layer on top for text and the inventory.
 - **Layout:** portrait, a 9:16 safe area that scales to fit; tap targets of
   at least 44px.
 - **Content as data:** each scene is a data file listing hotspots,
@@ -157,9 +157,13 @@ game but stay close to events in the book.
 5. Scenes 4–6, death cards and checkpoints, the ending teaser.
 6. Polish: hints, timing tweaks, testing on real phones.
 
+## Decided after review
+
+- **Shorthand puzzle:** simplified, invented strokes. The key is only visible
+  while you hold a button (the Count is watching), so you memorise it.
+- **Hints:** limited to three per chapter.
+
 ## Open questions
 
 - **Title:** working title *Dracula: The Castle*. Other ideas: *Jonathan
   Harker's Journal*, *Children of the Night*.
-- **Shorthand puzzle:** real Pitman shorthand symbols, or simplified ones?
-- **Difficulty:** should hints be unlimited ("story mode")?

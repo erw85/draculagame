@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05030a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="A gothic point-and-click game following Jonathan Harker's journal from Bram Stoker's Dracula.">
+<title>Dracula: The Castle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+  <div id="ui">
+    <div id="topbar" class="hidden">
+      <div id="scene-title"></div>
+      <button id="btn-hint" class="icon-btn" aria-label="Hint"><span class="q">?</span><span id="hint-count">3</span></button>
+      <button id="btn-menu" class="icon-btn" aria-label="Menu">&#9776;</button>
+    </div>
+    <div id="prompt" class="hidden"></div>
+    <div id="textbox" class="hidden">
+      <div id="speaker"></div>
+      <div id="text"></div>
+      <div class="more">&#9660;</div>
+    </div>
+    <div id="inventory" class="hidden"></div>
+    <div id="overlay"></div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
