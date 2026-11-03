@@ -23,7 +23,7 @@ function wing(ctx, t) {
 
 function women() {
   let p = 0, danger = 0, holding = false, el = 0, appear = 0;
-  let active = 0, phase = 'away', pt = 2.2;
+  let active = 0, phase = 'away', pt = 3.5;
   const brides = [
     { hair: '#1d1014', bx: 50, phase: 0 },
     { hair: '#e0b860', bx: 100, phase: 2 },
@@ -64,15 +64,15 @@ function women() {
       // one woman at a time turns to look; a laugh and red eyes warn first
       pt -= dt;
       if (pt <= 0) {
-        if (phase === 'away') { phase = 'warn'; pt = 0.9; g.sound.laugh(); }
-        else if (phase === 'warn') { phase = 'watch'; pt = 1.4 + Math.random() * 0.8; }
-        else { phase = 'away'; pt = 1.2 + Math.random() * 2; active = (active + 1 + Math.floor(Math.random() * 2)) % 3; }
+        if (phase === 'away') { phase = 'warn'; pt = 1.6; g.sound.laugh(); }
+        else if (phase === 'warn') { phase = 'watch'; pt = 1.2 + Math.random() * 0.6; }
+        else { phase = 'away'; pt = 2 + Math.random() * 2; active = (active + 1 + Math.floor(Math.random() * 2)) % 3; }
       }
       if (holding) {
-        p = Math.min(1, p + dt * 0.085);
-        if (phase === 'watch') danger += dt * 0.75;
+        p = Math.min(1, p + dt * 0.11);
+        if (phase === 'watch') danger += dt * 0.4;
       }
-      if (!holding || phase !== 'watch') danger = Math.max(0, danger - dt * 0.08);
+      if (!holding || phase !== 'watch') danger = Math.max(0, danger - dt * 0.25);
       g.sound.heartbeat(true, 1.4 + danger * 2);
       if (danger >= 1) {
         g.die('She went on her knees and bent over me, simply gloating… I felt the hard dents of two sharp teeth, just touching and pausing there. And then no more.');
@@ -95,7 +95,7 @@ function women() {
       A.jonathanLying(ctx, jx, FLOOR_Y + 4, 1);
       // eyes half-shut when lying still
       if (!holding) {
-        ctx.fillStyle = 'rgba(0,0,0,.42)';
+        ctx.fillStyle = 'rgba(0,0,0,.22)';
         ctx.fillRect(0, 0, A.W, A.H);
         ctx.fillStyle = 'rgba(5,0,6,.9)';
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(A.W, 0); ctx.lineTo(A.W, 90); ctx.quadraticCurveTo(A.W / 2, 170, 0, 90); ctx.fill();
@@ -111,6 +111,12 @@ function women() {
       ctx.font = '11px "IM Fell English", serif'; ctx.fillStyle = 'rgba(230,220,240,.8)';
       ctx.textAlign = 'right'; ctx.fillText('door', 320, 116);
       ctx.textAlign = 'left'; ctx.fillText(danger > 0.05 ? 'They are coming closer…' : '', 40, 116);
+      const status = phase === 'watch' ? ['She is watching — lie still!', '#ff4a5a']
+        : phase === 'warn' ? ['She is turning… let go!', '#ffb35c']
+        : ['Their backs are turned — creep!', '#b9e0b0'];
+      ctx.font = '17px "IM Fell English", serif'; ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(40, 128, 280, 28);
+      ctx.fillStyle = status[1]; ctx.fillText(status[0], 180, 148);
     },
   };
 }
