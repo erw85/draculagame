@@ -44,6 +44,7 @@ js/engine/game.js           loop, input, text boxes, inventory, journal pages, d
 js/engine/sound.js          all audio, synthesised with the Web Audio API (no audio files)
 js/engine/save.js           localStorage save (fails safely if storage is blocked)
 js/art/draw.js              code-drawn art: sky, castle, wolves, bats, characters, rooms
+                            (static pieces are drawn once into cached layers)
 js/art/bats.js              ambient bat flock (tap to scatter)
 js/items.js                 inventory items and icons
 js/scenes/*.js              one file per chapter; climb.js is the shared climbing minigame

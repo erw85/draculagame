@@ -1,4 +1,4 @@
-import { W, H, vignette, fog, sparkle, glow } from '../art/draw.js';
+import { W, H, vignette, fog, sparkle } from '../art/draw.js';
 import { Bats } from '../art/bats.js';
 import { ITEMS } from '../items.js';
 import { Sound } from './sound.js';
@@ -67,7 +67,7 @@ export class Game {
     this.showTitle();
     let last = performance.now();
     const frame = (now) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
       last = now;
       this.update(dt);
       this.draw();

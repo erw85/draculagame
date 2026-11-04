@@ -3,54 +3,99 @@ import * as A from '../art/draw.js';
 const CX = 180, CY = 470;          // calèche position
 const LAMP = { x: 252, y: 405 };   // carriage lamp
 
+// A black horse in side view, facing left. y = hooves.
+const HORSE = [[-46, -58], [-47, -64], [-38, -75], [-35, -85], [-31, -77], [-27, -76], [-14, -63], [-4, -55], [14, -55], [28, -53], [32, -51], [40, -37], [38, -24], [33, -38], [30, -42], [28, -30], [26, -18], [25, -2], [28, 0], [21, 0], [20, -16], [17, -28], [4, -32], [-10, -32], [-14, -28], [-15, -14], [-14, -2], [-11, 0], [-18, 0], [-19, -14], [-21, -30], [-25, -41], [-30, -52], [-38, -56], [-44, -56]];
+const horsePath = (() => { const p = new Path2D(); p.moveTo(...HORSE[0]); for (const q of HORSE.slice(1)) p.lineTo(...q); p.closePath(); return p; })();
+
 function horse(ctx, x, y, t, i) {
-  ctx.fillStyle = '#070408';
-  const st = Math.sin(t * 8 + i) * 4;
-  ctx.beginPath(); ctx.ellipse(x, y - 42, 30, 12, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(x - 20, y - 50); ctx.lineTo(x - 36, y - 80); ctx.lineTo(x - 26, y - 84); ctx.lineTo(x - 8, y - 54); ctx.fill();
-  ctx.save(); ctx.translate(x - 40, y - 78); ctx.rotate(0.6); ctx.beginPath(); ctx.ellipse(0, 0, 12, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  ctx.beginPath(); ctx.moveTo(x - 30, y - 88); ctx.lineTo(x - 28, y - 94); ctx.lineTo(x - 25, y - 86); ctx.fill();
-  ctx.strokeStyle = '#070408'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-  for (const [lx, ph] of [[-20, 0], [-14, 2], [18, 1], [24, 3]]) {
-    ctx.beginPath(); ctx.moveTo(x + lx, y - 36); ctx.lineTo(x + lx + Math.sin(t * 8 + ph + i) * 4, y - 2 - Math.abs(st) * 0.3); ctx.stroke();
-  }
-  ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(x + 28, y - 46); ctx.quadraticCurveTo(x + 40, y - 36, x + 36 + Math.sin(t * 3) * 2, y - 20); ctx.stroke();
+  ctx.save(); ctx.translate(x, y);
+  const st = Math.sin(t * 8 + i);
+  // far legs, trotting
+  ctx.strokeStyle = '#030204'; ctx.lineCap = 'round'; ctx.lineWidth = 4.5;
+  ctx.beginPath(); ctx.moveTo(-12, -28); ctx.quadraticCurveTo(-14 + st * 4, -14, -10 + st * 6, -1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(22, -28); ctx.quadraticCurveTo(24 - st * 4, -14, 21 - st * 6, -1); ctx.stroke();
+  const g = ctx.createLinearGradient(0, -85, 0, 0);
+  g.addColorStop(0, '#1e1622'); g.addColorStop(1, '#040205');
+  A.rimFill(ctx, horsePath, g, 'rgba(185,175,235,.55)', -1, -1);
+  // muscle and mane
+  ctx.strokeStyle = 'rgba(150,140,200,.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-20, -44); ctx.quadraticCurveTo(-8, -38, 6, -44); ctx.moveTo(12, -48); ctx.quadraticCurveTo(22, -46, 26, -36); ctx.stroke();
+  ctx.strokeStyle = '#020103'; ctx.lineWidth = 1.2;
+  for (let k = 0; k < 7; k++) { const mx = -28 + k * 3.6, my = -75 + k * 3; ctx.beginPath(); ctx.moveTo(mx, my); ctx.quadraticCurveTo(mx + 3, my + 4, mx + 1 + Math.sin(t * 3 + k) * 1.5, my + 9); ctx.stroke(); }
+  // harness and blinker
+  ctx.strokeStyle = 'rgba(120,20,30,.8)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-40, -68); ctx.lineTo(-30, -60); ctx.moveTo(-24, -42); ctx.quadraticCurveTo(-6, -36, 14, -46); ctx.stroke();
+  ctx.fillStyle = '#c9a24a'; ctx.beginPath(); ctx.arc(-30, -60, 1.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,230,200,.7)'; ctx.fillRect(-38, -69, 1, 1);
+  ctx.restore();
 }
 
 function caleche(ctx, t, { lamp = 1, driver = true } = {}) {
   const x = CX, y = CY;
-  horse(ctx, x - 110, y, t, 0);
-  horse(ctx, x - 96, y + 6, t, 1);
-  ctx.strokeStyle = '#070408'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(x - 80, y - 46); ctx.lineTo(x - 30, y - 40); ctx.stroke();
-  ctx.fillStyle = '#0a0609';
-  ctx.beginPath();
-  ctx.moveTo(x - 36, y - 30); ctx.lineTo(x - 30, y - 88); ctx.quadraticCurveTo(x + 15, y - 112, x + 66, y - 88);
-  ctx.lineTo(x + 70, y - 30); ctx.quadraticCurveTo(x + 17, y - 18, x - 36, y - 30); ctx.fill();
-  ctx.fillStyle = 'rgba(255,170,80,.12)'; ctx.fillRect(x + 4, y - 80, 30, 26);
-  ctx.strokeStyle = '#0a0609'; ctx.lineWidth = 3;
+  horse(ctx, x - 104, y, t, 0);
+  horse(ctx, x - 92, y + 6, t, 1);
+  // traces from the horses to the carriage
+  ctx.strokeStyle = '#120a0c'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - 96, y - 44); ctx.lineTo(x - 30, y - 40); ctx.moveTo(x - 84, y - 38); ctx.lineTo(x - 30, y - 34); ctx.stroke();
+  // body of the calèche
+  const body = new Path2D();
+  body.moveTo(x - 36, y - 30); body.lineTo(x - 30, y - 88); body.quadraticCurveTo(x + 15, y - 114, x + 66, y - 88);
+  body.lineTo(x + 70, y - 30); body.quadraticCurveTo(x + 17, y - 16, x - 36, y - 30); body.closePath();
+  const bg = ctx.createLinearGradient(x - 36, y - 110, x + 70, y - 20);
+  bg.addColorStop(0, '#2a2030'); bg.addColorStop(0.5, '#0e0a10'); bg.addColorStop(1, '#030203');
+  A.rimFill(ctx, body, bg, 'rgba(185,175,235,.6)', -1.2, -1.2);
+  // panels, door and the dim window
+  ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 1.2;
+  ctx.strokeRect(x - 22, y - 80, 22, 42); ctx.strokeRect(x + 2, y - 84, 36, 50); ctx.strokeRect(x + 42, y - 80, 22, 42);
+  ctx.strokeStyle = 'rgba(200,170,90,.35)'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(x - 30, y - 88); ctx.quadraticCurveTo(x + 15, y - 112, x + 66, y - 88); ctx.stroke();
+  const wg = ctx.createLinearGradient(0, y - 80, 0, y - 56);
+  wg.addColorStop(0, 'rgba(255,170,80,.22)'); wg.addColorStop(1, 'rgba(120,50,20,.1)');
+  ctx.fillStyle = wg; ctx.fillRect(x + 6, y - 80, 28, 22);
+  ctx.strokeStyle = '#050304'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 6, y - 80, 28, 22);
+  ctx.fillStyle = '#c9a24a'; ctx.beginPath(); ctx.arc(x + 32, y - 52, 1.4, 0, Math.PI * 2); ctx.fill();
+  // roof rail
+  ctx.strokeStyle = '#1a1218'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x - 24, y - 99); ctx.lineTo(x + 56, y - 99); ctx.stroke();
+  // wheels with spokes, iron tyres catching the moon
   for (const [wx, wr] of [[x - 18, 22], [x + 50, 26]]) {
-    ctx.beginPath(); ctx.arc(wx, y - wr + 4, wr, 0, Math.PI * 2); ctx.stroke();
-    for (let k = 0; k < 6; k++) {
-      const a = k * Math.PI / 3 + t * 0.4;
-      ctx.beginPath(); ctx.moveTo(wx, y - wr + 4); ctx.lineTo(wx + Math.cos(a) * wr, y - wr + 4 + Math.sin(a) * wr); ctx.stroke();
+    const cy = y - wr + 4;
+    ctx.strokeStyle = '#0a0609'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(wx, cy, wr, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(190,180,240,.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(wx, cy, wr + 1.5, Math.PI * 1.05, Math.PI * 1.6); ctx.stroke();
+    ctx.strokeStyle = '#140c0e'; ctx.lineWidth = 2;
+    for (let k = 0; k < 10; k++) {
+      const a = (k * Math.PI) / 5 + t * 0.4;
+      ctx.beginPath(); ctx.moveTo(wx + Math.cos(a) * 4, cy + Math.sin(a) * 4); ctx.lineTo(wx + Math.cos(a) * wr, cy + Math.sin(a) * wr); ctx.stroke();
     }
+    ctx.fillStyle = '#2a2228'; ctx.beginPath(); ctx.arc(wx, cy, 4.5, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.fillStyle = '#0a0609';
-  ctx.fillRect(x - 58, y - 66, 26, 6);
+  // driver's box
+  ctx.fillStyle = '#0a0609'; ctx.fillRect(x - 58, y - 66, 28, 6);
   if (driver) {
-    ctx.beginPath(); ctx.moveTo(x - 52, y - 66); ctx.lineTo(x - 56, y - 112); ctx.lineTo(x - 40, y - 112); ctx.lineTo(x - 38, y - 66); ctx.fill();
-    ctx.beginPath(); ctx.arc(x - 48, y - 120, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillRect(x - 58, y - 132, 20, 8); ctx.fillRect(x - 62, y - 125, 28, 3);
-    A.glow(ctx, x - 45, y - 121, 6, '255,40,40', 0.6);
+    // a tall man in a long coat and great black hat
+    const d = new Path2D();
+    d.moveTo(x - 54, y - 64); d.lineTo(x - 58, y - 108); d.quadraticCurveTo(x - 48, y - 116, x - 38, y - 108); d.lineTo(x - 36, y - 64); d.closePath();
+    d.moveTo(x - 64, y - 124); d.lineTo(x - 32, y - 124); d.lineTo(x - 36, y - 121); d.lineTo(x - 60, y - 121); d.closePath();
+    d.rect(x - 57, y - 136, 18, 13);
+    A.rimFill(ctx, d, '#060407', 'rgba(185,175,235,.6)', -1, -1);
+    ctx.fillStyle = '#2a1e18';
+    ctx.beginPath(); ctx.moveTo(x - 54, y - 119); ctx.quadraticCurveTo(x - 48, y - 104, x - 42, y - 119); ctx.fill();
+    A.glow(ctx, x - 50, y - 117, 6, '255,40,40', 0.7, true);
+    A.glow(ctx, x - 45, y - 117, 6, '255,40,40', 0.7, true);
+    // whip
+    ctx.strokeStyle = '#120a0c'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x - 44, y - 92); ctx.quadraticCurveTo(x - 80, y - 140, x - 120, y - 120 + Math.sin(t * 2) * 6); ctx.stroke();
   }
-  ctx.strokeStyle = '#0a0609'; ctx.lineWidth = 2;
+  // brass carriage lamp
+  ctx.strokeStyle = '#3a2a14'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(LAMP.x - 8, LAMP.y - 12); ctx.lineTo(LAMP.x - 18, LAMP.y - 12); ctx.stroke();
-  A.glow(ctx, LAMP.x, LAMP.y, 40 + lamp * 60, '255,170,80', 0.15 + lamp * 0.5);
-  ctx.fillStyle = '#1a1210'; ctx.fillRect(LAMP.x - 6, LAMP.y - 12, 12, 18);
-  ctx.fillStyle = `rgba(255,${150 + lamp * 70},90,${0.2 + lamp * 0.8})`;
-  ctx.fillRect(LAMP.x - 4, LAMP.y - 9, 8, 12);
+  A.glow(ctx, LAMP.x, LAMP.y, 40 + lamp * 70, '255,160,70', 0.1 + lamp * 0.4, true);
+  ctx.fillStyle = '#6a4a1a'; ctx.fillRect(LAMP.x - 7, LAMP.y - 14, 14, 3); ctx.fillRect(LAMP.x - 6, LAMP.y + 6, 12, 3);
+  ctx.fillStyle = `rgba(255,${150 + lamp * 80},${90 + lamp * 60},${0.2 + lamp * 0.8})`;
+  ctx.fillRect(LAMP.x - 5, LAMP.y - 11, 10, 17);
+  ctx.strokeStyle = '#3a2a14'; ctx.lineWidth = 1; ctx.strokeRect(LAMP.x - 5, LAMP.y - 11, 10, 17);
 }
 
 function pass(ctx, t) {

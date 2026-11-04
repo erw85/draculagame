@@ -220,65 +220,83 @@ export function climb(cfg) {
 }
 
 function drawHold(ctx, x, y, crumble) {
-  ctx.fillStyle = '#5b5164';
-  ctx.fillRect(x - 15, y - 6, 30, 11);
-  ctx.fillStyle = '#7a7086';
-  ctx.fillRect(x - 15, y - 6, 30, 3);
-  ctx.fillStyle = 'rgba(0,0,0,.5)';
-  ctx.fillRect(x - 15, y + 5, 30, 3);
+  // a jutting stone: shadow beneath, a front face and a moonlit top
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
+  ctx.beginPath(); ctx.ellipse(x + 3, y + 10, 17, 4, 0, 0, Math.PI * 2); ctx.fill();
+  const front = ctx.createLinearGradient(0, y - 2, 0, y + 7);
+  front.addColorStop(0, crumble ? '#4a4048' : '#57505e'); front.addColorStop(1, '#221c26');
+  ctx.fillStyle = front; ctx.fillRect(x - 15, y - 2, 30, 9);
+  const top = ctx.createLinearGradient(x - 15, 0, x + 15, 0);
+  top.addColorStop(0, crumble ? '#8a7f86' : '#a59cb2'); top.addColorStop(1, crumble ? '#4e454e' : '#5c5468');
+  ctx.fillStyle = top;
+  ctx.beginPath(); ctx.moveTo(x - 15, y - 2); ctx.lineTo(x - 12, y - 7); ctx.lineTo(x + 13, y - 7); ctx.lineTo(x + 15, y - 2); ctx.fill();
+  A.texture(ctx, x - 15, y - 7, 30, 14, 0.5, 'overlay', 0.5);
   if (crumble) {
-    ctx.fillStyle = 'rgba(30,15,25,.35)'; ctx.fillRect(x - 15, y - 6, 30, 11);
-    ctx.strokeStyle = 'rgba(10,4,10,.95)'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x - 8, y - 6); ctx.lineTo(x - 2, y); ctx.lineTo(x - 6, y + 5); ctx.moveTo(x + 9, y - 6); ctx.lineTo(x + 3, y + 1); ctx.lineTo(x + 7, y + 5); ctx.stroke();
+    ctx.strokeStyle = 'rgba(10,4,10,.95)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x - 8, y - 7); ctx.lineTo(x - 3, y - 1); ctx.lineTo(x - 6, y + 7); ctx.moveTo(x + 9, y - 7); ctx.lineTo(x + 3, y + 1); ctx.lineTo(x + 7, y + 7); ctx.stroke();
+    ctx.fillStyle = '#1a141c'; ctx.fillRect(x - 15, y + 5, 6, 2); ctx.fillRect(x + 10, y + 4, 5, 3);
   }
 }
 
-// The castle wall with the abyss to the left. Rows are generated per world-row so the
-// pattern scrolls consistently.
+// A tall strip of castle stonework, made once and scrolled.
+const TILE_H = 720;
+let wallTile = null;
+function getWallTile(ctx) {
+  if (wallTile) return wallTile;
+  const s = 2;
+  const c = document.createElement('canvas');
+  c.width = W * s; c.height = TILE_H * s;
+  const g = c.getContext('2d');
+  g.scale(s, s);
+  A.stoneBlocks(g, 0, 0, W, TILE_H, { seed: 23, base: '#3a3246', rowH: 24, tint: 0.16 });
+  wallTile = c;
+  return c;
+}
+
+// The castle wall with the abyss to the left.
 function drawWall(ctx, t, camY, levels, target) {
   const depth = Math.min(1, camY / (levels * STEP));
-  // abyss / sky strip
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, '#0a0614'); g.addColorStop(1, '#241434');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  A.drawMoon(ctx, 40, 120 - depth * 60, 22);
-  A.ridge(ctx, 31, H - 120 + depth * 80, 60, '#0e0818');
-  // wall
+  A.sky(ctx, t, { moon: { x: 40, y: 120, r: 22 }, clouds: false, top: '#0a0614', mid: '#170d24', bottom: '#2a1838' });
+  A.ridge(ctx, 31, H - 120 + Math.round(depth * 8) * 10, 60, '#0e0818');
   const edge = (wy) => 70 + Math.sin(wy * 0.013) * 14 + Math.sin(wy * 0.041) * 6;
-  const rowH = 24;
-  const first = Math.floor(camY / rowH) - 1;
-  for (let row = first; row < first + H / rowH + 3; row++) {
-    const wy = row * rowH, sy = wy - camY;
-    const r = A.rng(row * 7919 + 13);
-    const ex = edge(wy);
-    let xx = ex - (row % 2 ? 16 : 0);
-    while (xx < W) {
-      const bw = 34 + r() * 24;
-      const l = r();
-      ctx.fillStyle = `rgb(${34 + l * 14},${28 + l * 10},${40 + l * 14})`;
-      ctx.fillRect(Math.max(ex, xx) + 1, sy + 1, bw - 2, rowH - 2);
-      xx += bw;
-    }
-  }
-  // shadowed edge
-  ctx.fillStyle = 'rgba(0,0,0,.45)';
-  for (let sy = 0; sy < H; sy += 6) ctx.fillRect(edge(sy + camY) - 2, sy, 10, 6);
-  // moonlight wash
-  const mg = ctx.createLinearGradient(0, 0, W, 0);
-  mg.addColorStop(0, 'rgba(180,180,255,.12)'); mg.addColorStop(1, 'rgba(0,0,0,.35)');
+  const wall = new Path2D();
+  wall.moveTo(W, -10);
+  for (let sy = -10; sy <= H + 10; sy += 8) wall.lineTo(edge(sy + camY), sy);
+  wall.lineTo(W, H + 10); wall.closePath();
+  // moonlit rim along the wall's edge
+  ctx.save(); ctx.translate(-1.5, 0); ctx.fillStyle = 'rgba(190,180,240,.5)'; ctx.fill(wall); ctx.restore();
+  ctx.save();
+  ctx.clip(wall);
+  const tile = getWallTile(ctx);
+  const off = -(((camY % TILE_H) + TILE_H) % TILE_H);
+  for (let ty = off; ty < H; ty += TILE_H) ctx.drawImage(tile, 0, ty, W, TILE_H);
+  // moonlight from the left, falling off across the wall
+  const mg = ctx.createLinearGradient(60, 0, W, 0);
+  mg.addColorStop(0, 'rgba(170,165,240,.16)'); mg.addColorStop(0.4, 'rgba(0,0,0,.1)'); mg.addColorStop(1, 'rgba(0,0,0,.5)');
   ctx.fillStyle = mg; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
   // destination
   const endY = 120 + levels * STEP - camY;
   if (target === 'window') {
     if (endY < H + 140) {
-      ctx.fillStyle = '#05030a';
-      ctx.fillRect(160, endY + 20, 80, 110);
-      ctx.fillStyle = 'rgba(255,170,80,.15)';
-      ctx.fillRect(166, endY + 26, 68, 98);
-      ctx.fillStyle = '#4c4256'; ctx.fillRect(152, endY + 14, 96, 8);
+      const x = 160, y = endY + 20, w = 80, h = 110;
+      ctx.fillStyle = '#5a5064';
+      ctx.beginPath(); ctx.moveTo(x - 8, y + h + 4); ctx.lineTo(x - 8, y + w / 2); ctx.arc(x + w / 2, y + w / 2, w / 2 + 8, Math.PI, 0); ctx.lineTo(x + w + 8, y + h + 4); ctx.fill();
+      A.texture(ctx, x - 8, y - 8, w + 16, h + 12, 0.5, 'overlay', 1);
+      const ig = ctx.createLinearGradient(0, y, 0, y + h);
+      ig.addColorStop(0, '#120a10'); ig.addColorStop(1, '#3a2016');
+      ctx.fillStyle = ig;
+      ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + w / 2); ctx.arc(x + w / 2, y + w / 2, w / 2, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.fill();
+      A.glow(ctx, x + w / 2, y + h - 20, 60, '255,150,60', 0.18, true);
+      ctx.fillStyle = '#6a6074'; ctx.fillRect(x - 12, y + h, w + 24, 8);
+      ctx.fillStyle = 'rgba(220,210,240,.25)'; ctx.fillRect(x - 12, y + h, w + 24, 1.5);
     }
   } else if (endY < H + 260) {
-    // the foot of the precipice: mist and waiting eyes
+    // the foot of the precipice: rocks, mist and waiting eyes
+    ctx.fillStyle = '#0a0610';
+    ctx.beginPath(); ctx.moveTo(0, endY + 90);
+    for (let i = 0; i <= 12; i++) ctx.lineTo(i * 30, endY + 70 + Math.sin(i * 2.1) * 14);
+    ctx.lineTo(W, H + 300); ctx.lineTo(0, H + 300); ctx.fill();
     A.fog(ctx, t, { y: endY + 40, h: 220, alpha: 0.6, n: 7, speed: 10, seed: 4 });
     for (const [ex, ey] of [[120, 120], [220, 150], [300, 110], [170, 190]]) A.eyesInDark(ctx, ex, endY + ey, t, 1.1);
   }

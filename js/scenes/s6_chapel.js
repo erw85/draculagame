@@ -22,13 +22,36 @@ function dawnRoom(ctx, t) {
   ctx.fillStyle = '#2a1416'; ctx.fillRect(20, 470, 90, 30); ctx.fillRect(16, 450, 10, 50);
 }
 
+// A small arched window showing a grey-pink dawn sky.
+function dawnWindow(ctx, x, y, w, h) {
+  A.layer(ctx, `dawnwin|${x}|${y}|${w}|${h}`, x - 10, y - 10, w + 20, h + 22, (c) => {
+    const arch = (px, py, pw, ph) => { c.beginPath(); c.moveTo(px, py + ph); c.lineTo(px, py + pw / 2); c.arc(px + pw / 2, py + pw / 2, pw / 2, Math.PI, 0); c.lineTo(px + pw, py + ph); c.closePath(); };
+    arch(x - 8, y - 8, w + 16, h + 12);
+    c.fillStyle = '#4a4050'; c.fill();
+    c.save(); arch(x - 8, y - 8, w + 16, h + 12); c.clip();
+    A.texture(c, x - 10, y - 10, w + 20, h + 22, 0.5, 'overlay', 1);
+    c.restore();
+    c.save(); arch(x, y, w, h); c.clip();
+    const g = c.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, '#5a5274'); g.addColorStop(0.6, '#b08a90'); g.addColorStop(1, '#e0b090');
+    c.fillStyle = g; c.fillRect(x, y, w, h);
+    c.fillStyle = '#3a3044';
+    c.beginPath(); c.moveTo(x, y + h); for (let i = 0; i <= 8; i++) c.lineTo(x + (w * i) / 8, y + h * (0.72 + 0.08 * Math.sin(i * 2.3))); c.lineTo(x + w, y + h); c.fill();
+    c.strokeStyle = 'rgba(20,14,20,.8)'; c.lineWidth = 0.8;
+    for (let d = -h; d < w + h; d += 10) { c.beginPath(); c.moveTo(x + d, y); c.lineTo(x + d + h * 0.55, y + h); c.moveTo(x + d, y); c.lineTo(x + d - h * 0.55, y + h); c.stroke(); }
+    c.restore();
+    c.strokeStyle = '#1e1820'; c.lineWidth = 3;
+    c.beginPath(); c.moveTo(x + w / 2, y); c.lineTo(x + w / 2, y + h); c.stroke();
+    c.fillStyle = '#3a3240'; c.fillRect(x - 10, y + h + 2, w + 20, 6);
+  });
+}
+
 function countRoom(ctx, t, g) {
   A.stoneWall(ctx, 0, 0, 360, 450, { seed: 91, base: '#2a2228' });
   // dusty light from the window we climbed in by
   ctx.fillStyle = 'rgba(220,200,190,.08)';
   ctx.beginPath(); ctx.moveTo(250, 80); ctx.lineTo(330, 80); ctx.lineTo(260, 520); ctx.lineTo(130, 520); ctx.fill();
-  ctx.fillStyle = '#c0a090'; ctx.fillRect(255, 80, 70, 120);
-  ctx.strokeStyle = '#120b10'; ctx.lineWidth = 4; ctx.strokeRect(255, 80, 70, 120);
+  dawnWindow(ctx, 255, 80, 70, 120);
   A.floor(ctx, 450, '#1d1518');
   // corner door to the winding stair
   A.door(ctx, 20, 260, 64, 190, { seed: 17, open: 0.5 });
@@ -81,22 +104,53 @@ function chapel(ctx, t, g) {
 // The Count in his box, "simply gorged with blood".
 function gorged(ctx, t, struck) {
   const { x, y, w, h } = BOX;
-  ctx.fillStyle = '#2d1c10'; ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = '#140c08'; ctx.fillRect(x + 5, y + 4, w - 10, h - 8);
-  ctx.fillStyle = '#3a2614'; ctx.save(); ctx.translate(x + w + 4, y - 30); ctx.rotate(0.3); ctx.fillRect(0, 0, 12, 70); ctx.restore();
-  // body under dark cloak
-  ctx.fillStyle = '#060308'; ctx.beginPath(); ctx.ellipse(x + w / 2 + 14, y + h / 2, 48, 14, 0, 0, Math.PI * 2); ctx.fill();
-  // bloated face, ruddy, hair now dark iron-grey
-  const fx = x + 30, fy = y + h / 2;
-  ctx.fillStyle = '#c87a6a'; ctx.beginPath(); ctx.ellipse(fx, fy, 15, 13, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#4a4650'; ctx.beginPath(); ctx.ellipse(fx - 9, fy, 8, 13, 0, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
-  ctx.fillStyle = '#8a1018';
-  ctx.beginPath(); ctx.ellipse(fx + 9, fy + 1, 2.5, 5, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillRect(fx + 9, fy + 3, 12, 2); ctx.fillRect(fx + 14, fy + 5, 2, 6);
+  // the open box, its lid leaning on the wall
+  const lid = ctx.createLinearGradient(x + w, y - 40, x + w + 16, y + 30);
+  lid.addColorStop(0, '#4a3018'); lid.addColorStop(1, '#1a1008');
+  ctx.save(); ctx.translate(x + w + 2, y - 34); ctx.rotate(0.28); ctx.fillStyle = lid; ctx.fillRect(0, 0, 12, 76); ctx.restore();
+  A.crate(ctx, x, y, w, h, { lid: false });
+  ctx.fillStyle = '#0c0705'; ctx.fillRect(x + 5, y + 3, w - 10, h - 8);
+  for (let i = 0; i < 30; i++) { const r = A.rng(i + 50); ctx.fillStyle = r() < 0.5 ? '#2a1c10' : '#160e08'; ctx.beginPath(); ctx.arc(x + 8 + r() * (w - 16), y + 6 + r() * (h - 14), 1 + r() * 2, 0, Math.PI * 2); ctx.fill(); }
+  // body beneath the black cloak, hands folded
+  const body = new Path2D();
+  body.moveTo(x + 40, y + 14); body.quadraticCurveTo(x + 80, y + 8, x + 120, y + 16); body.lineTo(x + 120, y + 34); body.quadraticCurveTo(x + 80, y + 40, x + 40, y + 36); body.closePath();
+  const bg = ctx.createLinearGradient(0, y + 8, 0, y + 40);
+  bg.addColorStop(0, '#2a2232'); bg.addColorStop(1, '#050307');
+  A.rimFill(ctx, body, bg, 'rgba(200,190,220,.35)', 0, -1);
+  ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1;
+  for (const fx of [60, 80, 100]) { ctx.beginPath(); ctx.moveTo(x + fx, y + 12); ctx.quadraticCurveTo(x + fx + 4, y + 24, x + fx - 2, y + 37); ctx.stroke(); }
+  ctx.fillStyle = '#d0b0a0'; ctx.beginPath(); ctx.ellipse(x + 70, y + 24, 5, 4, 0, 0, Math.PI * 2); ctx.ellipse(x + 76, y + 23, 5, 4, 0.3, 0, Math.PI * 2); ctx.fill();
+  // bloated, ruddy face; hair and moustache now dark iron-grey
+  const fx = x + 26, fy = y + 25;
+  ctx.fillStyle = '#4a4650';
+  ctx.beginPath(); ctx.ellipse(fx - 9, fy, 9, 15, 0, Math.PI * 0.5, Math.PI * 1.5); ctx.fill();
+  const sk = ctx.createRadialGradient(fx - 2, fy - 4, 2, fx, fy, 17);
+  sk.addColorStop(0, '#e89a86'); sk.addColorStop(0.7, '#b8604e'); sk.addColorStop(1, '#7a3028');
+  ctx.fillStyle = sk; ctx.beginPath(); ctx.ellipse(fx, fy, 15, 14, 0, 0, Math.PI * 2); ctx.fill();
+  // swollen lids and pouches under the eyes
+  ctx.fillStyle = 'rgba(120,40,40,.45)';
+  ctx.beginPath(); ctx.ellipse(fx + 1, fy - 6, 3.5, 2.4, 0, 0, Math.PI * 2); ctx.ellipse(fx + 1, fy + 3, 3.5, 2.4, 0, 0, Math.PI * 2); ctx.fill();
   const eye = 0.6 + 0.4 * Math.sin(t * 2);
-  A.glow(ctx, fx + 2, fy - 4, 8, '255,30,40', 0.4 * eye);
-  ctx.fillStyle = `rgba(255,40,40,${eye})`; ctx.fillRect(fx, fy - 6, 2, 2); ctx.fillRect(fx, fy - 1, 2, 2);
-  if (struck) { ctx.strokeStyle = '#b0101c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx - 12, fy - 6); ctx.lineTo(fx - 6, fy + 4); ctx.stroke(); }
+  for (const ey of [fy - 6, fy + 3]) {
+    A.glow(ctx, fx + 1, ey, 7, '255,30,40', 0.45 * eye, true);
+    ctx.fillStyle = `rgba(255,40,40,${eye})`; ctx.beginPath(); ctx.ellipse(fx + 1.5, ey, 1.4, 0.9, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.strokeStyle = '#8a4a3a'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(fx + 2, fy - 2); ctx.quadraticCurveTo(fx + 8, fy - 1.5, fx + 8, fy - 1); ctx.stroke();
+  // iron-grey moustache and blood-red mouth
+  ctx.fillStyle = '#5a5660';
+  ctx.beginPath(); ctx.ellipse(fx + 10, fy - 1.5, 2.2, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#8a0a14';
+  ctx.beginPath(); ctx.ellipse(fx + 12.5, fy - 1.5, 1.8, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // gouts of fresh blood trickling over the chin and neck
+  ctx.fillStyle = '#a0101c';
+  ctx.beginPath(); ctx.moveTo(fx + 13, fy + 1); ctx.quadraticCurveTo(fx + 20, fy + 3, fx + 24, fy + 2); ctx.lineTo(fx + 24, fy + 4); ctx.quadraticCurveTo(fx + 19, fy + 5, fx + 13, fy + 3); ctx.fill();
+  ctx.fillRect(fx + 18, fy + 3, 1.6, 6 + Math.sin(t) * 0.5);
+  ctx.fillStyle = 'rgba(255,200,200,.5)'; ctx.fillRect(fx + 20, fy + 2, 2, 0.8);
+  if (struck) {
+    ctx.strokeStyle = '#b0101c'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(fx - 10, fy - 8); ctx.lineTo(fx - 5, fy + 6); ctx.stroke();
+  }
 }
 
 export default {

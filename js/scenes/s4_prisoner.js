@@ -105,68 +105,155 @@ function wallView(ctx, t, g, crawlP = -1) {
   A.forest(ctx, 9, 590, '#06040a', { n: 50, hmin: 8, hmax: 18, spread: 30 });
   A.fog(ctx, t, { y: 560, h: 120, alpha: 0.5, seed: 3 });
   // the castle wall dropping away beneath the window, in perspective
-  ctx.fillStyle = '#2a2232';
-  ctx.beginPath(); ctx.moveTo(0, 640); ctx.lineTo(0, 0); ctx.lineTo(250, 0); ctx.lineTo(150, 640); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1;
-  for (let i = 0; i < 26; i++) {
-    const y = Math.pow(i / 26, 1.4) * 640;
-    const right = 250 - (y / 640) * 100;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(right, y); ctx.stroke();
-  }
-  ctx.fillStyle = 'rgba(190,190,255,.07)';
-  ctx.beginPath(); ctx.moveTo(180, 0); ctx.lineTo(250, 0); ctx.lineTo(150, 640); ctx.lineTo(120, 640); ctx.fill();
+  const wall = new Path2D();
+  wall.moveTo(0, 640); wall.lineTo(0, 0); wall.lineTo(250, 0); wall.lineTo(150, 640); wall.closePath();
+  ctx.save(); ctx.translate(1.5, 0); ctx.fillStyle = 'rgba(190,180,240,.5)'; ctx.fill(wall); ctx.restore();
+  ctx.save();
+  ctx.clip(wall);
+  A.layer(ctx, 'crawlwall', 0, 0, 250, 640, (c) => {
+    // courses of stone that shrink with distance
+    let y = 0, rh = 30, row = 0;
+    const r = A.rng(77);
+    while (y < 640) {
+      const right = 250 - (y / 640) * 100;
+      let x = -(row % 2) * 20;
+      while (x < right) {
+        const bw = (40 + r() * 20) * (rh / 30);
+        const l = (r() - 0.5) * 0.3;
+        const col = A.shade('#3a3246', l);
+        const gr = c.createLinearGradient(0, y, 0, y + rh);
+        gr.addColorStop(0, A.shade(col, 0.12)); gr.addColorStop(1, A.shade(col, -0.3));
+        c.fillStyle = gr; c.fillRect(x + 1, y + 1, bw - 2, rh - 2);
+        c.fillStyle = 'rgba(255,250,240,.06)'; c.fillRect(x + 1, y + 1, bw - 2, 1);
+        x += bw;
+      }
+      y += rh; rh = Math.max(4, rh * 0.93); row++;
+    }
+    A.texture(c, 0, 0, 250, 640, 0.45, 'overlay', 1);
+    const dg = c.createLinearGradient(0, 0, 0, 640);
+    dg.addColorStop(0, 'rgba(0,0,0,0)'); dg.addColorStop(1, 'rgba(10,5,20,.75)');
+    c.fillStyle = dg; c.fillRect(0, 0, 250, 640);
+    const mg = c.createLinearGradient(0, 0, 250, 0);
+    mg.addColorStop(0, 'rgba(0,0,0,.45)'); mg.addColorStop(1, 'rgba(170,160,230,.12)');
+    c.fillStyle = mg; c.fillRect(0, 0, 250, 640);
+  });
+  ctx.restore();
   // window frame we are looking out of
-  ctx.fillStyle = '#0c080e';
-  ctx.fillRect(0, 0, 360, 40); ctx.fillRect(0, 0, 24, 640); ctx.fillRect(336, 0, 24, 640);
-  if (crawlP >= 0) {
-    // The Count emerging and crawling face down, cloak spread like great wings.
-    const y = 50 + crawlP * 400, x = 175 - crawlP * 70, s = 1.9 - crawlP * 1.1;
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
-    const flap = Math.sin(t * 2) * 6;
-    ctx.fillStyle = '#050208';
-    ctx.beginPath(); ctx.moveTo(0, 30); ctx.quadraticCurveTo(-60 - flap, 0, -50, -40); ctx.quadraticCurveTo(-20, -20, 0, -46); ctx.quadraticCurveTo(20, -20, 50, -40); ctx.quadraticCurveTo(60 + flap, 0, 0, 30); ctx.fill();
-    ctx.fillStyle = '#eeeae2'; ctx.beginPath(); ctx.ellipse(0, 38, 8, 9, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#d6cfc4';
-    const k = Math.sin(t * 5);
-    for (const [hx, hy] of [[-22, 30 + k * 6], [22, 30 - k * 6], [-16, -40 - k * 4], [16, -40 + k * 4]]) { ctx.beginPath(); ctx.ellipse(hx, hy, 4, 5, 0, 0, Math.PI * 2); ctx.fill(); }
-    ctx.restore();
-  }
+  const fr = ctx.createLinearGradient(0, 0, 0, 40);
+  fr.addColorStop(0, '#0c080e'); fr.addColorStop(1, '#2a2230');
+  ctx.fillStyle = fr; ctx.fillRect(0, 0, 360, 40);
+  ctx.fillStyle = '#16101a'; ctx.fillRect(0, 0, 24, 640); ctx.fillRect(336, 0, 24, 640);
+  ctx.fillStyle = 'rgba(200,190,230,.15)'; ctx.fillRect(22, 40, 2, 600); ctx.fillRect(336, 40, 2, 600);
+  if (crawlP >= 0) crawler(ctx, t, crawlP);
 }
 
+// The Count, seen from above, crawling face down with his cloak spread like great wings.
+function crawler(ctx, t, p) {
+  const y = 60 + p * 400, x = 175 - p * 70, s = 1.9 - p * 1.1;
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const k = Math.sin(t * 5);
+  // limbs reaching for the corners of the stones
+  ctx.strokeStyle = '#08060c'; ctx.lineCap = 'round'; ctx.lineWidth = 5;
+  const limbs = [[-26, -34 - k * 5], [26, -34 + k * 5], [-22, 34 + k * 5], [22, 34 - k * 5]];
+  for (const [lx, ly] of limbs) { ctx.beginPath(); ctx.moveTo(lx * 0.3, ly * 0.4); ctx.quadraticCurveTo(lx * 0.9, ly * 0.5, lx, ly); ctx.stroke(); }
+  // cloak
+  const flap = Math.sin(t * 2) * 5;
+  const cloak = new Path2D();
+  cloak.moveTo(0, 30);
+  cloak.bezierCurveTo(-30, 26, -62 - flap, 6, -54, -36);
+  cloak.quadraticCurveTo(-46, -26, -40, -40); cloak.quadraticCurveTo(-30, -28, -22, -44); cloak.quadraticCurveTo(-12, -32, 0, -48);
+  cloak.quadraticCurveTo(12, -32, 22, -44); cloak.quadraticCurveTo(30, -28, 40, -40); cloak.quadraticCurveTo(46, -26, 54, -36);
+  cloak.bezierCurveTo(62 + flap, 6, 30, 26, 0, 30); cloak.closePath();
+  const cg = ctx.createRadialGradient(-10, -10, 4, 0, 0, 60);
+  cg.addColorStop(0, '#2a2234'); cg.addColorStop(1, '#040207');
+  A.rimFill(ctx, cloak, cg, 'rgba(190,180,240,.5)', 1.2, -1.2);
+  ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1.4;
+  for (const fx of [-34, -18, 18, 34]) { ctx.beginPath(); ctx.moveTo(fx * 0.2, 20); ctx.quadraticCurveTo(fx * 0.8, 0, fx, -36); ctx.stroke(); }
+  // pale hands and feet gripping the stone
+  ctx.fillStyle = '#d8cfc2';
+  for (const [lx, ly] of limbs) {
+    ctx.beginPath(); ctx.ellipse(lx, ly, 3.4, 4.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#d8cfc2'; ctx.lineWidth = 1;
+    for (const f of [-2, 0, 2]) { ctx.beginPath(); ctx.moveTo(lx + f, ly + Math.sign(ly) * 3); ctx.lineTo(lx + f * 1.5, ly + Math.sign(ly) * 8); ctx.stroke(); }
+  }
+  // the white-haired head, going first
+  const hg = ctx.createRadialGradient(-2, 36, 1, 0, 38, 10);
+  hg.addColorStop(0, '#fbf8f2'); hg.addColorStop(1, '#a8a098');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.ellipse(0, 38, 8, 9.5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,110,105,.6)'; ctx.lineWidth = 0.5;
+  for (let i = -6; i <= 6; i += 2) { ctx.beginPath(); ctx.moveTo(i * 0.4, 30); ctx.quadraticCurveTo(i, 38, i * 0.8, 46); ctx.stroke(); }
+  ctx.restore();
+}
+
+// A long stone passage in one-point perspective.
 function corridor(ctx, t, g) {
-  ctx.fillStyle = '#05030a'; ctx.fillRect(0, 0, 360, 640);
+  ctx.fillStyle = '#030205'; ctx.fillRect(0, 0, 360, 640);
   if (!g.has('lamp')) {
     A.eyesInDark(ctx, 180, 300, t, 0.6, '200,40,60');
     return;
   }
-  const vx = 180, vy = 300;
-  // walls and floor
-  ctx.fillStyle = '#1e1824';
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(150, 250); ctx.lineTo(150, 350); ctx.lineTo(0, 640); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(360, 0); ctx.lineTo(210, 250); ctx.lineTo(210, 350); ctx.lineTo(360, 640); ctx.fill();
-  ctx.fillStyle = '#140f16';
-  ctx.beginPath(); ctx.moveTo(0, 640); ctx.lineTo(150, 350); ctx.lineTo(210, 350); ctx.lineTo(360, 640); ctx.fill();
-  ctx.fillStyle = '#0e0a10';
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(150, 250); ctx.lineTo(210, 250); ctx.lineTo(360, 0); ctx.fill();
-  ctx.fillStyle = '#2a2230'; ctx.fillRect(150, 250, 60, 100);
-  // end door (the one that gives)
-  ctx.fillStyle = '#3a2416'; ctx.fillRect(160, 268, 40, 82);
-  ctx.fillStyle = '#16100e'; ctx.fillRect(160, 290, 40, 3); ctx.fillRect(160, 330, 40, 3);
-  // side doors drawn as skewed quads
-  const sideDoor = (x1, x2, top1, top2, bot1, bot2) => {
-    ctx.fillStyle = '#34200f';
-    ctx.beginPath(); ctx.moveTo(x1, top1); ctx.lineTo(x2, top2); ctx.lineTo(x2, bot2); ctx.lineTo(x1, bot1); ctx.fill();
-    ctx.strokeStyle = '#120a06'; ctx.lineWidth = 2; ctx.stroke();
-  };
-  sideDoor(30, 82, 130, 190, 520, 450);
-  sideDoor(108, 132, 222, 246, 400, 375);
-  sideDoor(330, 278, 130, 190, 520, 450);
-  sideDoor(252, 228, 222, 246, 400, 375);
-  // lamplight
-  const gr = ctx.createRadialGradient(vx, 560, 40, vx, 420, 420);
-  gr.addColorStop(0, 'rgba(255,170,80,.18)'); gr.addColorStop(0.5, 'rgba(0,0,0,.2)'); gr.addColorStop(1, 'rgba(0,0,0,.9)');
+  A.layer(ctx, 'corridor', 0, 0, 360, 640, (c) => {
+    c.fillStyle = '#030205'; c.fillRect(0, 0, 360, 640);
+    const f = (z) => (1 - 1 / z) * (4 / 3);           // 0 at the viewer, 1 at the far wall
+    const lerp = (a, b, k) => a + (b - a) * k;
+    const r = A.rng(31);
+    const quad = (pts, col) => { c.fillStyle = col; c.beginPath(); c.moveTo(...pts[0]); for (const p of pts.slice(1)) c.lineTo(...p); c.closePath(); c.fill(); };
+    // side walls of stone
+    for (const side of [-1, 1]) {
+      const X = (k) => (side < 0 ? 150 * k : 360 - 150 * k);
+      const Y = (k, v) => lerp(250 * k, 640 - 290 * k, v);
+      const rows = 16;
+      for (let row = 0; row < rows; row++) {
+        const v0 = row / rows, v1 = (row + 1) / rows;
+        for (let z = 1 + (row % 2) * 0.12; z < 4; z += 0.24) {
+          const k0 = f(z), k1 = f(Math.min(4, z + 0.24));
+          const col = A.shade('#3a3246', (r() - 0.5) * 0.3 - k0 * 0.2);
+          quad([[X(k0), Y(k0, v0) + 0.6], [X(k1), Y(k1, v0) + 0.6], [X(k1), Y(k1, v1) - 0.6], [X(k0), Y(k0, v1) - 0.6]], col);
+        }
+      }
+    }
+    // flagstone floor
+    for (let z = 1; z < 4; z += 0.3) {
+      const k0 = f(z), k1 = f(Math.min(4, z + 0.3));
+      const y0 = 640 - 290 * k0, y1 = 640 - 290 * k1;
+      for (let i = 0; i < 4; i++) {
+        const a0 = lerp(150 * k0, 360 - 150 * k0, i / 4), a1 = lerp(150 * k0, 360 - 150 * k0, (i + 1) / 4);
+        const b0 = lerp(150 * k1, 360 - 150 * k1, i / 4), b1 = lerp(150 * k1, 360 - 150 * k1, (i + 1) / 4);
+        quad([[a0 + 0.8, y0 - 0.8], [a1 - 0.8, y0 - 0.8], [b1 - 0.5, y1 + 0.5], [b0 + 0.5, y1 + 0.5]], A.shade('#2a2228', (r() - 0.5) * 0.25));
+      }
+    }
+    // ceiling beams
+    for (let z = 1; z < 4; z += 0.4) {
+      const k0 = f(z), k1 = f(z + 0.12);
+      quad([[150 * k0, 250 * k0], [360 - 150 * k0, 250 * k0], [360 - 150 * k1, 250 * k1], [150 * k1, 250 * k1]], '#1a110a');
+    }
+    A.texture(c, 0, 0, 360, 640, 0.4, 'overlay', 1);
+    // far wall and the door that gives
+    A.stoneBlocks(c, 150, 250, 60, 100, { seed: 4, base: '#2a2432', rowH: 8 });
+    const woodDoor = (pts, dark) => {
+      const xs = pts.map((p) => p[0]);
+      const g2 = c.createLinearGradient(Math.min(...xs), 0, Math.max(...xs), 0);
+      g2.addColorStop(0, dark ? '#24140a' : '#4a2c16'); g2.addColorStop(1, dark ? '#4a2c16' : '#24140a');
+      quad(pts, g2);
+      c.strokeStyle = '#0a0604'; c.lineWidth = 2; c.beginPath(); c.moveTo(...pts[0]); for (const p of pts.slice(1)) c.lineTo(...p); c.closePath(); c.stroke();
+    };
+    woodDoor([[160, 268], [200, 268], [200, 350], [160, 350]]);
+    c.fillStyle = '#16100e'; c.fillRect(160, 288, 40, 3); c.fillRect(160, 330, 40, 3);
+    // side doors
+    woodDoor([[30, 130], [82, 190], [82, 450], [30, 520]], true);
+    woodDoor([[108, 222], [132, 246], [132, 375], [108, 400]], true);
+    woodDoor([[330, 130], [278, 190], [278, 450], [330, 520]]);
+    woodDoor([[252, 222], [228, 246], [228, 375], [252, 400]]);
+    for (const [x1, y1, x2, y2] of [[30, 230, 82, 262], [30, 420, 82, 400], [330, 230, 278, 262], [330, 420, 278, 400]]) {
+      c.strokeStyle = '#141012'; c.lineWidth = 4; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+    }
+  });
+  // lamplight from the lamp in Jonathan's hand
+  const flick = 1 + Math.sin(t * 9) * 0.03 + Math.sin(t * 13) * 0.02;
+  A.glow(ctx, 180, 600, 260 * flick, '255,160,70', 0.22, true);
+  const gr = ctx.createRadialGradient(180, 560, 60, 180, 420, 430);
+  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.55, 'rgba(0,0,0,.35)'); gr.addColorStop(1, 'rgba(0,0,0,.92)');
   ctx.fillStyle = gr; ctx.fillRect(0, 0, 360, 640);
-  void vy;
 }
 
 function lettersWritten(g) {
