@@ -279,34 +279,92 @@ export class Sound {
     this.yip(4.5, 1.05);
   }
 
-  flap() {
-    if (!this.ctx) return;
+  // A panned output for one sound, with a little of the valley echo.
+  _out(pan = 0, echo = 0.12) {
     const ctx = this.ctx;
-    for (let i = 0; i < 5; i++) {
-      const t = ctx.currentTime + i * 0.055;
-      const s = this._noise(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
-      bp.type = 'bandpass'; bp.frequency.value = 1100 + Math.random() * 400; bp.Q.value = 1.5;
-      s.connect(bp); bp.connect(g); g.connect(this.master);
-      this._env(g, t, 0.005, 0.18, 0.04);
-      s.start(t, Math.random()); s.stop(t + 0.07);
+    const g = ctx.createGain();
+    let node = g;
+    if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); node = p; }
+    node.connect(this.master);
+    if (this.reverb && echo > 0) { const e = ctx.createGain(); e.gain.value = echo; node.connect(e); e.connect(this.reverb); }
+    return { g, panner: node !== g ? node : null };
+  }
+
+  // Leathery wingbeats of a bat flying past: soft membrane "whups" with a crisp edge,
+  // 10-14 a second, swelling and fading as it crosses from pan0 to pan1.
+  wings(delay = 0, { beats = 8, rate = 12, pan0 = -0.6, pan1 = 0.6, loud = 0.5, swell = 0.4 } = {}) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, r = Math.random, t0 = ctx.currentTime + delay, dur = beats / rate;
+    const { g, panner } = this._out(pan0, 0.15);
+    g.gain.value = loud;
+    if (panner) { panner.pan.setValueAtTime(Math.max(-1, Math.min(1, pan0)), t0); panner.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, pan1)), t0 + dur); }
+    // brighter as it passes closest, duller as it goes
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1600, t0);
+    lp.frequency.linearRampToValueAtTime(5000, t0 + dur * Math.max(0.05, swell));
+    lp.frequency.linearRampToValueAtTime(1300, t0 + dur);
+    lp.connect(g);
+    let t = t0;
+    for (let i = 0; i < beats; i++) {
+      const k = beats > 1 ? i / (beats - 1) : 0;
+      const a = k < swell ? 0.35 + 0.65 * (k / swell) : 1 - 0.8 * ((k - swell) / Math.max(0.01, 1 - swell));
+      // the body of the stroke
+      const body = this._noise(), bp = ctx.createBiquadFilter(), bg = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 350 + r() * 250; bp.Q.value = 1.1;
+      body.connect(bp); bp.connect(bg); bg.connect(lp);
+      this._env(bg, t, 0.007, 0.9 * a, 0.05);
+      body.start(t, r()); body.stop(t + 0.07);
+      // the snap of the membrane at the end of the downstroke
+      const snap = this._noise(), hp = ctx.createBiquadFilter(), sg = ctx.createGain();
+      hp.type = 'highpass'; hp.frequency.value = 2200 + r() * 800;
+      snap.connect(hp); hp.connect(sg); sg.connect(lp);
+      this._env(sg, t + 0.012, 0.002, 0.14 * a, 0.014);
+      snap.start(t + 0.012, r()); snap.stop(t + 0.04);
+      t += (1 / rate) * (0.85 + r() * 0.3);
     }
-    this.squeak(0.05);
   }
 
-  squeak(delay = 0) {
+  // Bat social calls: rapid, irregular trains of tiny downward chirps.
+  chitter(delay = 0, { n = 6, pan = 0, loud = 0.07, pitch = 1 } = {}) {
     if (!this.ctx) return;
-    const ctx = this.ctx, t = ctx.currentTime + delay;
-    const o = this._osc('sine', 4200), g = ctx.createGain();
-    o.frequency.setValueAtTime(5200, t);
-    o.frequency.exponentialRampToValueAtTime(3400, t + 0.06);
-    o.connect(g); g.connect(this.master);
-    this._env(g, t, 0.004, 0.05, 0.06);
-    o.start(t); o.stop(t + 0.1);
+    const ctx = this.ctx, r = Math.random;
+    const { g } = this._out(pan, 0.1);
+    g.gain.value = loud;
+    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200;
+    hp.connect(g);
+    let t = ctx.currentTime + delay;
+    const base = (5200 + r() * 1800) * pitch;
+    for (let i = 0; i < n; i++) {
+      const f1 = base * (0.9 + r() * 0.25), f2 = f1 * (0.5 + r() * 0.15), d = 0.007 + r() * 0.012;
+      const o = ctx.createOscillator(); o.type = 'triangle';
+      o.frequency.setValueAtTime(f1, t);
+      o.frequency.exponentialRampToValueAtTime(f2, t + d);
+      const cg = ctx.createGain();
+      o.connect(cg); cg.connect(hp);
+      this._env(cg, t, 0.0015, 0.6 + r() * 0.4, d);
+      o.start(t); o.stop(t + d + 0.02);
+      t += 0.016 + r() * 0.03 + (r() < 0.18 ? 0.06 + r() * 0.06 : 0); // bursty, uneven spacing
+    }
   }
 
-  screech() {
+  // A tapped bat: a burst of chittering and wingbeats as it veers away.
+  flap(pan = 0) {
     if (!this.ctx) return;
-    for (let i = 0; i < 4; i++) this.squeak(i * 0.09);
+    const away = Math.max(-1, Math.min(1, pan + (pan < 0 ? -0.7 : 0.7)));
+    this.chitter(0, { n: 5 + Math.floor(Math.random() * 3), pan, loud: 0.08 });
+    this.wings(0.02, { beats: 7, rate: 13, pan0: pan, pan1: away, loud: 0.55, swell: 0.12 });
+  }
+
+  squeak(delay = 0, pan = 0) {
+    this.chitter(delay, { n: 2 + Math.floor(Math.random() * 2), pan, loud: 0.06 });
+  }
+
+  // A bat diving in: shrill chittering, wingbeats growing louder as it comes.
+  screech(pan = 0) {
+    if (!this.ctx) return;
+    this.chitter(0, { n: 10, pan, loud: 0.09, pitch: 1.12 });
+    this.chitter(0.45, { n: 6, pan: pan * 0.7, loud: 0.08, pitch: 1.05 });
+    this.wings(0.05, { beats: 14, rate: 11, pan0: pan, pan1: pan * 0.3, loud: 0.6, swell: 0.85 });
   }
 
   creak() {

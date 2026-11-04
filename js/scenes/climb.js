@@ -115,7 +115,7 @@ export function climb(cfg) {
         batT = batEvery[0] + r() * (batEvery[1] - batEvery[0]);
         const side = r() < 0.5 ? -1 : 1;
         bats.push({ x: side < 0 ? -20 : W + 20, y: jy - 30 + (r() - 0.5) * 120, side, t: 0, ph: 0, gone: false, vx: 0, vy: 0 });
-        g.sound.screech();
+        g.sound.screech(side * 0.8);
       }
       for (const b of bats) {
         b.ph += dt * 22;
@@ -139,7 +139,7 @@ export function climb(cfg) {
       for (const b of bats) {
         if (!b.gone && Math.hypot(b.x - x, b.y - camY - y) < 48) {
           b.gone = true; b.vx = (b.x < jx ? -1 : 1) * 200; b.vy = -100;
-          g.sound.flap();
+          g.sound.flap((b.x / W) * 1.6 - 0.8);
           return;
         }
       }

@@ -275,7 +275,7 @@ export class Game {
         return;
       }
     }
-    if (this.scene.bats && this.bats.hit(x, y)) { this.sound.flap(); return; }
+    if (this.scene.bats && this.bats.hit(x, y)) { this.sound.flap((x / W) * 1.6 - 0.8); return; }
     if (this.state.selected) this.select(null);
   }
 
