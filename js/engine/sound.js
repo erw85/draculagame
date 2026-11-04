@@ -528,6 +528,149 @@ export class Sound {
     });
   }
 
+  // ---------- dread ----------
+  // Unintelligible whispering: breathy noise shaped into syllables.
+  whisper(pan = 0, loud = 0.5) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, r = Math.random;
+    const { g } = this._out(pan, 0.6);
+    g.gain.value = loud;
+    let t = ctx.currentTime;
+    const syll = 6 + Math.floor(r() * 6);
+    for (let i = 0; i < syll; i++) {
+      const len = 0.08 + r() * 0.14;
+      const n = this._noise();
+      // a hiss ("s", "sh") or a breathy vowel
+      if (r() < 0.35) {
+        const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 3500 + r() * 2000;
+        const sg = ctx.createGain(); n.connect(hp); hp.connect(sg); sg.connect(g);
+        this._env(sg, t, 0.02, 0.25, len);
+      } else {
+        const sg = ctx.createGain(); sg.connect(g);
+        for (const [f, q] of [[500 + r() * 400, 6], [1100 + r() * 900, 8], [2500 + r() * 500, 10]]) {
+          const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+          n.connect(bp); bp.connect(sg);
+        }
+        this._env(sg, t, 0.03, 0.9, len);
+      }
+      n.start(t, r()); n.stop(t + len + 0.1);
+      t += len + 0.02 + (r() < 0.25 ? 0.15 : 0);
+    }
+  }
+
+  // A distant church bell (inharmonic partials, long decay).
+  toll(delay = 0, base = 110) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime + delay;
+    const { g } = this._out(0.2, 0.9);
+    g.gain.value = 0.35;
+    for (const [m, a, d] of [[0.5, 0.5, 5], [1, 1, 4], [1.19, 0.5, 3], [1.5, 0.4, 2.5], [2, 0.4, 2], [2.52, 0.25, 1.5], [3.01, 0.15, 1.2]]) {
+      const o = this._osc('sine', base * m), og = ctx.createGain();
+      o.connect(og); og.connect(g);
+      this._env(og, t, 0.005, 0.12 * a, d);
+      o.start(t); o.stop(t + d + 0.1);
+    }
+  }
+
+  // A low, chest-deep rumble that comes with the Count's voice.
+  countVoice() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
+    const g = ctx.createGain();
+    lp.connect(g); g.connect(this.master);
+    if (this.reverb) { const e = ctx.createGain(); e.gain.value = 0.4; g.connect(e); e.connect(this.reverb); }
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+    for (const f of [41, 55, 58.3]) { const o = this._osc('sawtooth', f); o.connect(lp); o.start(t); o.stop(t + 1.9); }
+  }
+
+  // A door slamming somewhere far off in the castle.
+  slam(pan = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const { g } = this._out(pan, 1.2);
+    g.gain.value = 0.55;
+    const o = this._osc('sine', 80); o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(35, t + 0.3);
+    const og = ctx.createGain(); o.connect(og); og.connect(g); this._env(og, t, 0.003, 0.9, 0.35);
+    const n = this._noise(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const ng = ctx.createGain(); n.connect(lp); lp.connect(ng); ng.connect(g); this._env(ng, t, 0.002, 0.6, 0.12);
+    o.start(t); o.stop(t + 0.5); n.start(t); n.stop(t + 0.2);
+  }
+
+  // Nails scratching on stone or glass.
+  scratch(pan = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, r = Math.random;
+    const { g } = this._out(pan, 0.3);
+    g.gain.value = 0.35;
+    let t = ctx.currentTime;
+    for (let i = 0; i < 5 + Math.floor(r() * 4); i++) {
+      const len = 0.12 + r() * 0.25;
+      const n = this._noise(), bp = ctx.createBiquadFilter(), sg = ctx.createGain();
+      bp.type = 'bandpass'; bp.Q.value = 4;
+      bp.frequency.setValueAtTime(2500 + r() * 2000, t); bp.frequency.linearRampToValueAtTime(1800 + r() * 3000, t + len);
+      n.connect(bp); bp.connect(sg); sg.connect(g);
+      this._env(sg, t, 0.01, 0.8, len);
+      n.start(t, r()); n.stop(t + len + 0.05);
+      t += len + 0.05 + r() * 0.2;
+    }
+  }
+
+  // A low, rasping growl.
+  growl(pan = 0, dur = 1.4) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const { g } = this._out(pan, 0.3);
+    const n = this._noise(), bp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 160; bp.Q.value = 1.5;
+    lp.type = 'lowpass'; lp.frequency.value = 700;
+    const o = this._osc('sawtooth', 70);
+    o.frequency.setValueAtTime(65, t); o.frequency.linearRampToValueAtTime(85, t + dur * 0.6); o.frequency.linearRampToValueAtTime(60, t + dur);
+    // the rasp: a fast flutter in the throat
+    const am = ctx.createGain(); am.gain.value = 0.5;
+    const flutter = this._osc('square', 24), fg = ctx.createGain(); fg.gain.value = 0.5;
+    flutter.connect(fg); fg.connect(am.gain);
+    n.connect(bp); bp.connect(am); o.connect(lp); lp.connect(am); am.connect(g);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.7, t + 0.2);
+    g.gain.setValueAtTime(0.7, t + dur - 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    n.start(t, Math.random()); o.start(t); flutter.start(t);
+    n.stop(t + dur); o.stop(t + dur); flutter.stop(t + dur);
+  }
+
+  // A sharp shock: a hiss of strings and a low hit.
+  stinger() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const { g } = this._out(0, 0.6);
+    g.gain.value = 0.3;
+    for (const f of [1760, 1865, 2093, 2217]) {
+      const o = this._osc('sawtooth', f), og = ctx.createGain(), lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 4000;
+      o.connect(lp); lp.connect(og); og.connect(g);
+      og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.08, t + 0.04); og.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+      o.start(t); o.stop(t + 1.2);
+    }
+    this.thud(0);
+  }
+
+  // A flame sputtering in a draught.
+  sputter() {
+    if (!this.ctx) return;
+    const ctx = this.ctx, r = Math.random;
+    for (let i = 0; i < 6; i++) {
+      const t = ctx.currentTime + i * 0.07 + r() * 0.05;
+      const n = this._noise(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = 300 + r() * 300; bp.Q.value = 2;
+      n.connect(bp); bp.connect(g); g.connect(this.master);
+      this._env(g, t, 0.004, 0.3, 0.05);
+      n.start(t, r()); n.stop(t + 0.1);
+    }
+  }
+
   heartbeat(on, rate = 1.1) {
     if (this.heart) { clearInterval(this.heart); this.heart = null; }
     if (!on || !this.ctx) return;

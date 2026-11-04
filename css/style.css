@@ -116,6 +116,14 @@ button {
 }
 #speaker:empty { display: none; }
 #text { color: #ece4f6; }
+#textbox.count {
+  background: linear-gradient(rgba(30, 0, 6, .96), rgba(6, 0, 2, .98));
+  border-color: rgba(200, 20, 40, .5);
+  border-top: 2px solid #e0253a;
+  box-shadow: 0 0 30px rgba(160, 0, 20, .6), inset 0 0 20px rgba(120, 0, 15, .5);
+}
+#textbox.count #speaker { color: #ff3a4a; letter-spacing: .12em; text-shadow: 0 0 10px rgba(255, 0, 30, .8); }
+#textbox.count #text { color: #f6dde2; font-style: italic; font-size: 1.05em; }
 #textbox .more {
   position: absolute; right: .7em; bottom: .3em;
   font-size: .7em; color: var(--blood-bright);
@@ -265,12 +273,12 @@ button {
 .ending .teaser { font-style: italic; color: #bfaed6; margin: 1em 0 1.4em; line-height: 1.5; }
 
 /* shorthand puzzle */
-.shorthand { background: rgba(0, 0, 0, .8); justify-content: flex-start; padding: 3.4em .8em 1em; }
+.shorthand { background: rgba(0, 0, 0, .8); justify-content: flex-start; padding: 3.2em .6em .6em; }
 .shorthand .paper { transform: none; padding: 1em 1em .9em; max-height: none; }
 .shorthand .task { font-size: .95em; margin-bottom: .55em; line-height: 1.35; }
 .shorthand .slots { display: flex; justify-content: center; gap: .5em; margin: .5em 0 .7em; }
 .shorthand .wslot {
-  width: 4.6em; height: 5em;
+  width: 4.1em; height: 4.3em;
   border: 1px dashed rgba(70, 30, 10, .6);
   border-radius: .2em;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
@@ -283,7 +291,7 @@ button {
 .shorthand .wslot .lbl { font-size: .72em; margin-top: .15em; letter-spacing: .05em; }
 .shorthand .palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: .35em; }
 .shorthand .sym {
-  height: 3.1em;
+  height: 2.5em;
   border: 1px solid rgba(70, 30, 10, .4);
   background: rgba(255, 255, 255, .25);
   border-radius: .2em;
@@ -293,8 +301,11 @@ button {
 .shorthand .sym svg { width: 100%; height: 100%; }
 .shorthand .key { margin-top: .7em; border-top: 1px solid rgba(80, 40, 20, .35); padding-top: .5em; }
 .shorthand .key h4 { margin: 0 0 .3em; font-weight: normal; font-style: italic; font-size: .9em; }
-.shorthand .keygrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .2em .3em; font-size: .7em; text-align: center; }
-.shorthand .keygrid svg { width: 2.2em; height: 2.2em; display: block; margin: 0 auto; }
+.shorthand .keygrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: .2em .3em; font-size: .7em; text-align: center; }
+.shorthand .keygrid svg { width: 1.9em; height: 1.9em; display: block; margin: 0 auto; }
 .shorthand .row { display: flex; gap: .5em; margin-top: .7em; }
 .shorthand .row .btn { flex: 1; min-width: 0; margin: 0; font-size: 1em; }
 .shorthand .msg { min-height: 1.3em; text-align: center; color: #7a1010; font-style: italic; font-size: .9em; margin-top: .3em; }
+
+/* the Count's map */
+.mapquiz .map { width: 100%; height: auto; display: block; margin: .3em 0; border: 1px solid rgba(80, 40, 20, .5); box-shadow: inset 0 0 20px rgba(110, 70, 30, .4); }

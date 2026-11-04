@@ -542,8 +542,35 @@ function claw(ctx, hx, hy, a, sc = 1) {
 }
 
 // The Count: tall, cloaked, white-haired, pale, red-eyed. y = feet.
-export function count(ctx, x, y, s, { t = 0, alpha = 1, eyes = 1, arms = 0 } = {}) {
+// His shadow, thrown huge up the wall behind him. It lags a moment behind him,
+// and its arms reach a little further than his own.
+function countShadow(ctx, t, a, sh) {
+  const sw = Math.sin((t - 0.5) * 1.3) * 4, aa = Math.min(1, a + 0.25 + 0.1 * Math.sin(t * 0.9));
+  ctx.save();
+  ctx.translate(sh.dx ?? 30, sh.dy ?? 0);
+  ctx.transform(1, 0, sh.skew ?? -0.18, 1, 0, 0);
+  ctx.scale(sh.s ?? 1.5, (sh.s ?? 1.5) * 1.12);
+  ctx.fillStyle = `rgba(0,0,0,${sh.a ?? 0.45})`;
+  const p = new Path2D();
+  p.moveTo(-15, -150); p.bezierCurveTo(-34 - aa * 34, -112, -44 - aa * 42, -60, -48 + sw - aa * 42, 0);
+  p.lineTo(48 + sw + aa * 42, 0); p.bezierCurveTo(44 + aa * 42, -60, 34 + aa * 34, -112, 15, -150); p.closePath();
+  p.moveTo(-22, -178); p.lineTo(-14, -146); p.lineTo(14, -146); p.lineTo(22, -178); p.lineTo(8, -156); p.lineTo(-8, -156); p.closePath();
+  p.ellipse(0, -168, 10, 14, 0, 0, TAU);
+  p.moveTo(-9, -174); p.lineTo(-13, -184); p.lineTo(-7, -178); p.moveTo(9, -174); p.lineTo(13, -184); p.lineTo(7, -178);
+  ctx.fill(p);
+  ctx.strokeStyle = ctx.fillStyle; ctx.lineCap = 'round';
+  for (const d of [-1, 1]) {
+    const hx = d * (44 + aa * 40), hy = -112 + aa * 4;
+    ctx.lineWidth = 11; ctx.beginPath(); ctx.moveTo(d * 12, -138); ctx.quadraticCurveTo(d * 30, -134, hx, hy); ctx.stroke();
+    ctx.lineWidth = 2.6;
+    for (const k of [-6, -2, 2, 6]) { ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + d * 16, hy + k * 1.6 - 4); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+
+export function count(ctx, x, y, s, { t = 0, alpha = 1, eyes = 1, arms = 0, shadow = null } = {}) {
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.globalAlpha = alpha;
+  if (shadow) countShadow(ctx, t, arms, shadow);
   const sw = Math.sin(t * 1.3) * 3, a = arms;
   // cloak
   const cloak = new Path2D();

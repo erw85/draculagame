@@ -23,13 +23,17 @@ deploy from branch, root folder).
 
 | # | Chapter | Gameplay |
 |---|---|---|
-| I | Bistritz | Tutorial: get the Count's letter and the landlady's crucifix |
-| II | The Borgo Pass | Keep the carriage lamp lit against the wolves; tap blue flames |
-| III | The Count's House | Explore room and library; the shaving mirror (crucifix reflex test) |
-| IV | A Prisoner | Shorthand letter puzzle; the Count crawls down the wall; dark corridor |
+| I | Bistritz | Get the Count's letter and the crucifix; find the hidden key to the drawer where the landlady locked your papers |
+| II | The Borgo Pass | Keep the lamp lit, mark the blue flames, and beat back wolves that lunge at the horses |
+| III | The Count's House | The Count appears and quizzes you on his map (use the deeds); then the shaving mirror |
+| IV | A Prisoner | A four-word shorthand letter with only three glances at the key; find the stuck door by its draught |
 | V | The Three Women | Hold to creep, release to lie still while they watch |
-| VI | The Chapel | Climb to the Count's room; find him in his box of earth |
+| VI | The Chapel | Climb to the Count's room; find which of five boxes holds him, from the clues |
 | VII | The Precipice | The final climb down the cliff |
+
+While you explore, the castle does unsettling things at random: guttering candles, red eyes in the dark,
+whispers, a winged shadow at the window, distant slams. Some puzzle answers (the stuck door, the
+Count's box) change each game.
 
 Failing a danger moment shows a death card; "Rise Again" restarts that chapter.
 Progress saves automatically at the start of each chapter. Each chapter has

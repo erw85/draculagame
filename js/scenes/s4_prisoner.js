@@ -13,23 +13,29 @@ const SYMBOLS = {
   DANGER: 'M8 30 L20 10 L32 30',
   LOVE: 'M10 12 Q32 12 20 22 Q8 32 30 30',
   HOME: 'M6 20 L30 20 M24 13 L31 20 L24 27',
+  // look-alikes, to trap a careless hand
+  BLOOD: 'M8 10 L20 30 L32 10',
+  NIGHT: 'M8 10 Q20 36 32 10',
+  WOLVES: 'M8 18 Q14 32 20 18 T32 18',
+  ESCAPE: 'M34 20 L10 20 M16 13 L9 20 L16 27',
 };
-const PALETTE_ORDER = ['DANGER', 'MINA', 'HOME', 'COUNT', 'LOVE', 'PRISONER', 'HELP', 'CASTLE'];
-const TARGET = ['PRISONER', 'COUNT', 'DANGER'];
+const PALETTE_ORDER = ['DANGER', 'NIGHT', 'HOME', 'COUNT', 'WOLVES', 'LOVE', 'PRISONER', 'BLOOD', 'HELP', 'ESCAPE', 'CASTLE', 'MINA'];
+const TARGET = ['PRISONER', 'COUNT', 'DANGER', 'HELP'];
+const GLANCES = 3;
 const sym = (w) => `<svg viewBox="0 0 40 40"><path d="${SYMBOLS[w]}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 function shorthandPuzzle(g, onSolved) {
   g.mode = 'puzzle';
-  const filled = [null, null, null];
+  const filled = TARGET.map(() => null);
   let active = 0;
   const root = g.overlay(`<div class="ov shorthand">
     <div class="paper">
-      <div class="task">The Count watches as I write. To Mr. Hawkins, a formal note. But to Mina, the truth — in our shorthand, which he cannot read:<br><i>I am a <b>prisoner</b>. The <b>Count</b> is a <b>danger</b>.</i></div>
+      <div class="task">The Count watches as I write. To Mr. Hawkins, a formal note. But to Mina, the truth — in our shorthand, which he cannot read:<br><i>I am a <b>prisoner</b>. The <b>Count</b> is a <b>danger</b>. <b>Help</b>.</i><br><small>He is watching. I dare glance at my key only three times.</small></div>
       <div class="slots">${TARGET.map((w, i) => `<div class="wslot" data-i="${i}"><span class="s"></span><span class="lbl">${w}</span></div>`).join('')}</div>
       <div class="palette">${PALETTE_ORDER.map((w) => `<button class="sym" data-w="${w}" aria-label="shorthand stroke">${sym(w)}</button>`).join('')}</div>
       <div class="msg"></div>
       <div class="row">
-        <button class="btn ghost" data-peek>Hold: glance at notebook</button>
+        <button class="btn ghost" data-peek>Glance at key (<span class="left">${GLANCES}</span>)</button>
         <button class="btn" data-send>Seal letter</button>
       </div>
       <div class="key hidden"><h4>From my notebook:</h4><div class="keygrid">${Object.keys(SYMBOLS).map((w) => `<div>${sym(w)}${w.toLowerCase()}</div>`).join('')}</div></div>
@@ -52,15 +58,20 @@ function shorthandPuzzle(g, onSolved) {
     msg.textContent = '';
     render();
   }));
+  // Each glance shows the key for a moment only, and the Count notices.
   const peek = root.querySelector('[data-peek]');
-  let peeks = 0;
-  const show = (e) => { e.preventDefault(); key.classList.remove('hidden'); peeks++; if (peeks === 6) msg.textContent = '“You consult your little book a great deal, my friend.”'; };
-  const hide = () => key.classList.add('hidden');
-  peek.addEventListener('pointerdown', (e) => {
-    show(e);
-    const off = () => { hide(); window.removeEventListener('pointerup', off); window.removeEventListener('pointercancel', off); };
-    window.addEventListener('pointerup', off);
-    window.addEventListener('pointercancel', off);
+  const left = root.querySelector('.left');
+  let glances = GLANCES, showing = false;
+  const warnings = ['The Count’s shadow fell across the page.', '“You consult your little book a great deal, my friend.”', 'He leaned closer. I could feel the cold of him on my neck.'];
+  const setGlances = (n) => { glances = n; left.textContent = n; peek.disabled = n <= 0; peek.style.opacity = n <= 0 ? 0.4 : 1; };
+  peek.addEventListener('click', () => {
+    if (showing || glances <= 0) return;
+    showing = true;
+    key.classList.remove('hidden');
+    msg.textContent = warnings[GLANCES - glances] || '';
+    setGlances(glances - 1);
+    g.sound.countVoice();
+    setTimeout(() => { key.classList.add('hidden'); showing = false; if (glances <= 0) msg.textContent = 'He is watching too closely now. I must write from memory.'; }, 1800);
   });
   root.querySelector('[data-send]').addEventListener('click', () => {
     if (filled.some((f) => !f)) { msg.textContent = 'The letter is not finished.'; g.sound.click(); return; }
@@ -70,9 +81,10 @@ function shorthandPuzzle(g, onSolved) {
       g.renderInventory();
       onSolved();
     } else {
-      msg.textContent = 'No — Mina could never read that. I scratched it out and began again.';
-      g.sound.scrape();
+      msg.textContent = 'No — Mina could never read that. I scratched it out and began again, and he turned away for a moment.';
+      g.sound.scrape(); g.sound.growl(0, 0.8);
       filled.fill(null); active = 0; render();
+      setGlances(Math.max(glances, 2));
     }
   });
 }
@@ -95,7 +107,7 @@ function chamber(ctx, t, g) {
     A.glow(ctx, 238, 400, 80, '255,170,80', 0.35);
     ctx.fillStyle = 'rgba(255,190,90,.95)'; ctx.beginPath(); ctx.ellipse(238, 404, 3, 7, 0, 0, Math.PI * 2); ctx.fill();
   } else A.candle(ctx, 230, 420, t, 0.8);
-  if (!g.flag('countGone')) A.count(ctx, 300, 560, 1.45, { t, eyes: 0.5 });
+  if (!g.flag('countGone')) A.count(ctx, 292, 600, 1.85, { t, eyes: 0.6, shadow: { dx: -70, s: 1.6, a: 0.7, skew: 0.2 } });
 }
 
 function wallView(ctx, t, g, crawlP = -1) {
@@ -266,11 +278,35 @@ function lettersWritten(g) {
   ], () => { g.set('countGone'); g.sound.door(); });
 }
 
+// The five doors of the passage. One of them (chosen anew each game) is only stuck.
+const DOORS = [
+  { id: 'd1', x: 30, y: 150, w: 54, h: 340, gx: 56, gy: 320 },
+  { id: 'd2', x: 104, y: 222, w: 30, h: 170, gx: 120, gy: 310 },
+  { id: 'd3', x: 276, y: 150, w: 54, h: 340, gx: 304, gy: 320 },
+  { id: 'd4', x: 226, y: 222, w: 30, h: 170, gx: 240, gy: 310 },
+  { id: 'end', x: 154, y: 262, w: 52, h: 92, gx: 180, gy: 310 },
+];
+
+function forceDoor(g) {
+  if (!g.flag('crawled')) { g.say('I dared not force it while the Count was in the castle. I heard his step somewhere below.'); return; }
+  const n = (g.flag('shoves') || 0) + 1;
+  g.set('shoves', n);
+  g.sound.creak(); g.shake = 0.5;
+  if (n === 1) { g.say('I set my shoulder to the door. It gave a little under pressure, and the sound of it echoed through the castle.'); return; }
+  if (n === 2) { g.sound.whisper(0.6, 0.3); g.say('Again. The hinges had fallen somewhat, and the heavy door rested on the floor. Somewhere behind me, something whispered.'); return; }
+  g.sound.door();
+  g.say([
+    { text: 'With many efforts I forced it back so that I could enter.' },
+    { text: 'I was now in a wing of the castle further to the right than the rooms I knew.' },
+  ], () => g.completeScene());
+}
+
 const LOCKED = [
   'Locked, and the lock comparatively new.',
   'Locked and bolted.',
   'Locked. Doors, doors, doors everywhere…',
   'This one is locked too. The castle is a veritable prison.',
+  'Locked. The keyhole is black with age.',
 ];
 
 export default {
@@ -288,6 +324,7 @@ export default {
   },
   start: 'chamber',
   keep: ['crucifix'],
+  setup(g) { g.set('draftDoor', Math.floor(Math.random() * DOORS.length)); },
 
   onEnter(g) {
     g.say([
@@ -298,14 +335,17 @@ export default {
 
   hint(g) {
     if (!g.has('notebook')) return 'My shorthand notebook is on the desk.';
-    if (!g.flag('written')) return 'Use the notebook at the desk. Hold the button to glance at my key — the Count is watching, so memorise the strokes.';
+    if (!g.flag('written')) return 'Use the notebook at the desk. You may glance at the key only three times, so memorise the four strokes you need — and beware the strokes that look almost the same, only turned about.';
     if (!g.flag('crawled')) return 'The Count has left me. Where has he gone? Look out of the window.';
     if (!g.has('lamp')) return 'The corridor is pitch dark. I need the lamp from my desk.';
-    return 'Try every door in the corridor — the one at the far end seemed different.';
+    if (!g.flag('draftFound')) return 'Every door seems locked. But a door that is only stuck would let a draught through. Select the lamp and hold it to each door, and watch the flame.';
+    return 'That door is only stuck. Keep putting your shoulder to it.';
   },
 
   rooms: {
     chamber: {
+      haunts: ['scratch', 'wolves', 'whisper', 'gutter'],
+      eyes: [[60, 210]],
       draw(ctx, t, g) { chamber(ctx, t, g); },
       hotspots: [
         {
@@ -379,28 +419,30 @@ export default {
 
     corridor: {
       draw(ctx, t, g) { corridor(ctx, t, g); },
+      haunts: ['slam', 'eyes', 'gutter', 'whisper'],
+      eyes: [[180, 300], [118, 330], [242, 330]],
       vignette: 0.6,
       onEnter(g) {
         if (!g.has('lamp')) g.say('It is pitch dark. Something glints at the far end of the passage… I need a light.');
         else if (!g.flag('corrSeen')) { g.set('corrSeen'); g.say('The lamp throws long quivering shadows down the passage. Doors on every side.'); }
       },
       hotspots: [
-        { id: 'd1', x: 30, y: 150, w: 54, h: 340, gx: 56, gy: 320, show: (g) => g.has('lamp'), tap(g) { g.sound.thud(); g.say(LOCKED[0]); } },
-        { id: 'd2', x: 104, y: 222, w: 30, h: 170, gx: 120, gy: 310, show: (g) => g.has('lamp'), tap(g) { g.sound.thud(); g.say(LOCKED[1]); } },
-        { id: 'd3', x: 276, y: 150, w: 54, h: 340, gx: 304, gy: 320, show: (g) => g.has('lamp'), tap(g) { g.sound.thud(); g.say(LOCKED[2]); } },
-        { id: 'd4', x: 226, y: 222, w: 30, h: 170, gx: 240, gy: 310, show: (g) => g.has('lamp'), tap(g) { g.sound.thud(); g.say(LOCKED[3]); } },
-        {
-          id: 'end', x: 154, y: 262, w: 52, h: 92, gx: 180, gy: 310,
+        ...DOORS.map((d, i) => ({
+          ...d,
           show: (g) => g.has('lamp'),
           tap(g) {
-            if (!g.flag('crawled')) { g.say('This door gave a little under pressure… but I heard a step somewhere below. Not while the Count is in the castle.'); return; }
-            g.sound.door();
-            g.say([
-              { text: 'I found one door at the top of the stairway which, though it seemed to be locked, gave a little under pressure. I tried it harder, and found that it was not really locked, but that the hinges had fallen somewhat.' },
-              { text: 'With many efforts I forced it back so that I could enter. I was now in a wing of the castle further to the right than the rooms I knew.' },
-            ], () => g.completeScene());
+            if (g.flag('draftDoor') !== i || !g.flag('draftFound')) { g.sound.thud(); g.say(LOCKED[i]); return; }
+            forceDoor(g);
           },
-        },
+          use: {
+            lamp(g) {
+              if (g.flag('draftDoor') === i) {
+                g.set('draftFound'); g.sound.sputter();
+                g.say('I held the lamp to the crack of the door. The flame bowed toward it, and guttered — a draught! This door is not locked, only stuck fast.');
+              } else g.say('I held the lamp close to the door. The flame stood perfectly still.');
+            },
+          },
+        })),
         {
           id: 'back', x: 140, y: 470, w: 80, h: 80, gx: 180, gy: 520,
           tap(g) { g.goRoom('chamber'); },

@@ -1,4 +1,4 @@
-import { W, H, vignette, fog, sparkle } from '../art/draw.js';
+import { W, H, vignette, fog, sparkle, bat, glow } from '../art/draw.js';
 import { Bats } from '../art/bats.js';
 import { ITEMS } from '../items.js';
 import { Sound } from './sound.js';
@@ -40,6 +40,10 @@ export class Game {
     this.onTextDone = null;
     this.fadeA = 1;
     this.ripples = [];
+    this.fx = [];          // short-lived scare effects
+    this.shake = 0;
+    this.hauntT = 0;
+    this.countTalking = false;
     const saved = save.load();
     this.saved = saved && saved.checkpoint ? saved : null;
     this.sound.muted = !!(saved && saved.muted);
@@ -118,9 +122,22 @@ export class Game {
     this.ripples = this.ripples.filter((r) => (r.t += dt) < 0.5);
     this.bats.update(dt, this.t);
     if (this.typing) {
-      this.typing.shown = Math.min(this.typing.full.length, this.typing.shown + dt * 70);
+      this.typing.shown = Math.min(this.typing.full.length, this.typing.shown + dt * (this.countTalking ? 42 : 70));
       this.el.text.textContent = this.typing.full.slice(0, Math.floor(this.typing.shown));
       if (this.typing.shown >= this.typing.full.length) this.typing = null;
+    }
+    this.shake = Math.max(0, this.shake - dt * 1.5);
+    this.fx = this.fx.filter((f) => (f.t += dt) < f.dur);
+    // Now and then, while the player explores, the castle does something unsettling.
+    if (this.mode === 'play' && this.scene && !this.challenge && !this.textActive()) {
+      const hs = this.room().haunts || this.scene.haunts;
+      if (hs && hs.length) {
+        this.hauntT -= dt;
+        if (this.hauntT <= 0) {
+          this.hauntT = 14 + Math.random() * 16;
+          this.haunt(hs[Math.floor(Math.random() * hs.length)]);
+        }
+      }
     }
     if (this.mode === 'play' && this.challenge && !this.textActive() && this.challenge.update) {
       this.challenge.update(dt, this);
@@ -138,6 +155,8 @@ export class Game {
       return;
     }
     const scene = this.scene, room = this.room();
+    ctx.save();
+    if (this.shake > 0) ctx.translate((Math.random() - 0.5) * 10 * this.shake, (Math.random() - 0.5) * 10 * this.shake);
     room.draw(ctx, t, this);
     const showSpots = !this.challenge || this.challenge.showHotspots;
     if (showSpots && this.mode === 'play') {
@@ -151,6 +170,14 @@ export class Game {
     if (scene.bats) this.bats.draw(ctx);
     if (this.challenge && this.challenge.draw) this.challenge.draw(ctx, t, this);
     if (room.fog || scene.fog) fog(ctx, t, room.fog || scene.fog);
+    this.drawFx(ctx, t);
+    ctx.restore();
+    if (this.countTalking) {
+      // the room darkens and reddens while he speaks
+      ctx.fillStyle = 'rgba(12,0,4,.45)'; ctx.fillRect(0, 0, W, H);
+      vignette(ctx, 0.9);
+      glow(ctx, W / 2, H * 0.45, 420, '120,0,15', 0.12 + 0.04 * Math.sin(t * 3));
+    }
     if (this.challenge && this.challenge.drawTop) this.challenge.drawTop(ctx, t, this);
     vignette(ctx, room.vignette ?? 0.85);
     for (const r of this.ripples) {
@@ -202,6 +229,8 @@ export class Game {
     this.sound.heartbeat(false);
     this.sound.ambience(scene.ambience || 'night');
     this.bats.set(scene.bats || 0, scene.batArea);
+    this.fx = [];
+    this.hauntT = 10 + Math.random() * 8;
     const [num, name] = scene.title.includes(' · ') ? scene.title.split(' · ') : ['', scene.title];
     this.el.title.innerHTML = `${num ? `<span class="num">${esc(num)}</span>` : ''}${esc(name)}`;
     this.el.topbar.classList.remove('hidden');
@@ -355,6 +384,10 @@ export class Game {
     }
     this.el.textbox.classList.remove('hidden');
     this.el.speaker.textContent = l.who || '';
+    const isCount = l.who === 'The Count';
+    this.el.textbox.classList.toggle('count', isCount);
+    if (isCount && !this.countTalking) { this.sound.countVoice(); this.shake = Math.max(this.shake, 0.3); }
+    this.countTalking = isCount;
     this.el.text.textContent = '';
     this.typing = { full: l.text, shown: 0 };
     if (l.sfx) l.sfx(this);
@@ -365,7 +398,61 @@ export class Game {
     this.showNextLine();
   }
 
-  hideText() { this.el.textbox.classList.add('hidden'); this.typing = null; }
+  hideText() { this.el.textbox.classList.add('hidden'); this.typing = null; this.countTalking = false; }
+
+  // ------------------------------------------------------------ dread
+  haunt(kind) {
+    const s = this.sound, r = Math.random, pan = r() * 1.6 - 0.8;
+    const room = this.room();
+    switch (kind) {
+      case 'gutter': this.fx.push({ kind: 'dark', t: 0, dur: 2.4 }); s.sputter(); break;
+      case 'eyes': {
+        const spots = room.eyes || [[40, 200], [320, 380], [60, 470], [300, 150]];
+        const [x, y] = spots[Math.floor(r() * spots.length)];
+        this.fx.push({ kind: 'eyes', x, y, t: 0, dur: 2.6 });
+        s.whisper((x / W) * 1.6 - 0.8, 0.25);
+        break;
+      }
+      case 'whisper': s.whisper(pan, 0.5); this.shake = 0.15; break;
+      case 'shadow':
+        this.fx.push({ kind: 'shadow', t: 0, dur: 2.2, dir: r() < 0.5 ? 1 : -1, y: 110 + r() * 160 });
+        s.wings(0, { beats: 12, rate: 9, pan0: -0.8, pan1: 0.8, loud: 0.45, swell: 0.5 });
+        break;
+      case 'slam': s.slam(pan); this.shake = 0.6; this.fx.push({ kind: 'dust', t: 0, dur: 1.6, seed: r() * 1000 }); break;
+      case 'bell': s.toll(0); s.toll(2.8); s.toll(5.6); break;
+      case 'scratch': s.scratch(pan); break;
+      case 'wolves': s.howl(0, 0.85 + r() * 0.3, { dist: 0.8 }); break;
+      case 'heart': s.heartbeat(true, 1.6); setTimeout(() => { if (!this.challenge) s.heartbeat(false); }, 5000); break;
+      default: break;
+    }
+  }
+
+  drawFx(ctx, t) {
+    for (const f of this.fx) {
+      const p = f.t / f.dur;
+      if (f.kind === 'dark') {
+        ctx.fillStyle = `rgba(0,0,0,${Math.sin(Math.PI * p) * 0.7})`; ctx.fillRect(0, 0, W, H);
+      } else if (f.kind === 'eyes') {
+        const a = Math.min(1, f.t / 0.5) * Math.min(1, (f.dur - f.t) / 0.4) * (Math.sin(f.t * 3) > 0.96 ? 0.1 : 1);
+        for (const dx of [-5, 5]) {
+          glow(ctx, f.x + dx, f.y, 10, '255,20,30', 0.55 * a, true);
+          ctx.fillStyle = `rgba(255,50,50,${a})`;
+          ctx.beginPath(); ctx.ellipse(f.x + dx, f.y, 2.2, 1.2, dx < 0 ? 0.2 : -0.2, 0, Math.PI * 2); ctx.fill();
+        }
+      } else if (f.kind === 'shadow') {
+        const x = f.dir > 0 ? -120 + p * (W + 240) : W + 120 - p * (W + 240);
+        ctx.save(); ctx.globalAlpha = 0.6 * Math.sin(Math.PI * p);
+        bat(ctx, x, f.y + Math.sin(p * 6) * 12, 7, t * 9, '#000');
+        ctx.restore();
+      } else if (f.kind === 'dust') {
+        ctx.fillStyle = `rgba(200,190,180,${0.6 * (1 - p)})`;
+        for (let i = 0; i < 40; i++) {
+          const x = ((i * 97 + f.seed) % W), y = 40 + (i * 37) % 60 + p * p * 300 + (i % 5) * 10;
+          ctx.fillRect(x, y, 1.4, 1.4);
+        }
+      }
+    }
+  }
 
   prompt(text) {
     this.el.prompt.classList.toggle('hidden', !text);

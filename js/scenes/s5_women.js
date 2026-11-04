@@ -37,11 +37,12 @@ function women() {
     g.sound.heartbeat(false);
     g.prompt(null);
     g.endChallenge();
+    g.sound.stinger(); g.sound.countVoice(); g.shake = 1;
     g.cutscene(2.2, (ctx, t, q) => {
       wing(ctx, t);
       A.jonathanLying(ctx, END_X, FLOOR_Y, 1);
       brides.forEach((b) => A.bride(ctx, b.bx + danger * 60 - q * 40, 520, 1.15, { hair: b.hair, t, phase: b.phase, look: 0.2, alpha: 1 - q * 0.3 }));
-      A.count(ctx, DOOR.x + 26, 470, 1.25, { t, arms: Math.min(1, q * 2), alpha: Math.min(1, q * 2), eyes: 1 });
+      A.count(ctx, DOOR.x + 10, 520, 1.7, { t, arms: Math.min(1, q * 2), alpha: Math.min(1, q * 2), eyes: 1, shadow: { dx: -90, s: 1.5, a: 0.5 * Math.min(1, q * 2), skew: 0.25 } });
     }, () => {
       g.say([
         { text: 'I was conscious of the presence of the Count, and of his being as if lapped in a storm of fury.' },

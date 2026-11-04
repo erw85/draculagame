@@ -1,7 +1,21 @@
 import * as A from '../art/draw.js';
 import { climb } from './climb.js';
 
-const BOX = { x: 120, y: 470, w: 130, h: 50 };
+const BOX = { x: 120, y: 470, w: 130, h: 50 }; // the size gorged() is drawn at
+// Five great boxes. Which one holds the Count is chosen anew each game.
+const CRATES = [
+  { x: 14, y: 404, w: 96, h: 56, n: 7 },
+  { x: 250, y: 400, w: 96, h: 56, n: 12 },
+  { x: 124, y: 428, w: 110, h: 50, n: 23 },
+  { x: 16, y: 500, w: 112, h: 54, n: 41 },
+  { x: 166, y: 506, w: 112, h: 54, n: 50 },
+];
+const NAILED = [
+  'Nailed fast. The earth inside smells of the grave.',
+  'Nailed down hard. I could not stir the lid.',
+  'Nailed, every nail driven home.',
+  'Nailed fast. A beetle crawled from a crack and away.',
+];
 
 function dawnRoom(ctx, t) {
   A.stoneWall(ctx, 0, 0, 360, 460, { seed: 71, base: '#2e2834' });
@@ -85,20 +99,35 @@ function chapel(ctx, t, g) {
   ctx.fillStyle = '#16100e'; ctx.fillRect(0, 470, 360, 170);
   ctx.fillStyle = 'rgba(80,60,40,.25)';
   for (let i = 0; i < 40; i++) { const r = A.rng(i); ctx.fillRect(r() * 360, 480 + r() * 150, 6 + r() * 14, 2); }
+  // a faint trail of fresh earth on the flags, leading to his box
+  const cb = CRATES[g.flag('countBox') ?? 0];
+  for (let i = 0; i < 9; i++) {
+    const k = i / 8, fx = 330 + (cb.x + cb.w / 2 - 330) * k, fy = 610 + (cb.y + cb.h + 4 - 610) * k;
+    ctx.fillStyle = 'rgba(120,86,52,.75)';
+    ctx.beginPath(); ctx.ellipse(fx + (i % 2 ? 6 : -6), fy, 4.5, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(60,40,22,.8)';
+    ctx.beginPath(); ctx.ellipse(fx + (i % 2 ? 6 : -6) + 1, fy + 0.6, 2.6, 1.2, 0, 0, Math.PI * 2); ctx.fill();
+  }
   // the great boxes, filled with earth
-  A.crate(ctx, 10, 410, 90, 58, { earth: true });
-  A.crate(ctx, 270, 400, 84, 64, { earth: true });
-  A.crate(ctx, 22, 360, 70, 50, { earth: true });
-  A.crate(ctx, 280, 350, 70, 50, { earth: true });
-  // the great box
-  if (!g.flag('lidUp')) A.crate(ctx, BOX.x, BOX.y, BOX.w, BOX.h, { lid: true });
-  else gorged(ctx, t, g.flag('struck'));
-  // shovel
+  CRATES.forEach((c, i) => {
+    if (i === g.flag('countBox') && g.flag('lidUp')) gorgedAt(ctx, t, g.flag('struck'), c);
+    else A.crate(ctx, c.x, c.y, c.w, c.h, { lid: true });
+    ctx.fillStyle = 'rgba(230,220,200,.55)'; ctx.font = 'bold 10px serif'; ctx.textAlign = 'center';
+    ctx.fillText(`No. ${c.n}`, c.x + c.w / 2, c.y + c.h * 0.6);
+  });
+  // shovel, leaning against the wall
   if (!g.has('shovel')) {
     ctx.strokeStyle = '#6a4a2a'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(300, 470); ctx.lineTo(330, 380); ctx.stroke();
-    ctx.fillStyle = '#7d828a'; ctx.beginPath(); ctx.moveTo(292, 470); ctx.lineTo(306, 470); ctx.lineTo(304, 500); ctx.lineTo(290, 500); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(318, 560); ctx.lineTo(340, 470); ctx.stroke();
+    ctx.fillStyle = '#7d828a'; ctx.beginPath(); ctx.moveTo(310, 560); ctx.lineTo(326, 560); ctx.lineTo(322, 588); ctx.lineTo(308, 588); ctx.fill();
   }
+}
+
+function gorgedAt(ctx, t, struck, c) {
+  ctx.save();
+  ctx.translate(c.x, c.y); ctx.scale(c.w / BOX.w, c.h / BOX.h); ctx.translate(-BOX.x, -BOX.y);
+  gorged(ctx, t, struck);
+  ctx.restore();
 }
 
 // The Count in his box, "simply gorged with blood".
@@ -153,6 +182,48 @@ function gorged(ctx, t, struck) {
   }
 }
 
+function countBoxTap(g, c) {
+  if (g.flag('struck')) { g.say('The lid has fallen over again, and hid the horrid thing from my sight.'); return; }
+  if (!g.flag('nailsSeen')) {
+    g.set('nailsSeen');
+    g.say(`No. ${c.n}. The lid was laid on it, not fastened down, but with the nails ready in their places to be hammered home.`);
+    return;
+  }
+  if (!g.flag('lidUp')) {
+    g.set('lidUp');
+    g.sound.creak(); g.sound.stinger(); g.shake = 0.8;
+    g.say([
+      { text: 'I raised the lid, and laid it back against the wall; and then I saw something which filled my very soul with horror.' },
+      { text: 'There lay the Count, but looking as if his youth had been half renewed, for the white hair and moustache were changed to dark iron-grey; the mouth was redder than ever, for on the lips were gouts of fresh blood.' },
+      { text: 'It seemed as if the whole awful creature were simply gorged with blood. He lay like a filthy leech, exhausted with his repletion.' },
+    ]);
+    return;
+  }
+  g.set('searched');
+  g.sound.heartbeat(true, 1.8); setTimeout(() => g.sound.heartbeat(false), 4000);
+  g.say('I shuddered as I bent over to touch him, and every sense in me revolted at the contact; but I had to search, or I was lost. I felt all over the body, but no sign could I find of the key.');
+}
+
+function strike(g) {
+  if (!g.flag('lidUp')) { g.say('The lid is on the box.'); return; }
+  if (!g.flag('searched')) { g.say('First I must search him for the key.'); return; }
+  g.say([
+    { text: 'There was a mocking smile on the bloated face which seemed to drive me mad. This was the being I was helping to transfer to London. A terrible desire came upon me to rid the world of such a monster.' },
+    { text: 'I lifted the shovel high, and struck, with the edge downward, at the hateful face. But as I did so the head turned, and the eyes fell full upon me, with all their blaze of basilisk horror.', sfx: (g) => { g.sound.stinger(); g.sound.countVoice(); g.shake = 1.2; } },
+  ], () => {
+    g.set('struck');
+    g.take('shovel');
+    g.say('The sight seemed to paralyse me, and the shovel turned in my hand and glanced from the face. The lid fell over again, and hid the horrid thing from my sight.', () => {
+      g.set('lidUp', false);
+      g.say([
+        { text: 'As I waited I heard in the distance a gipsy song sung by merry voices coming closer — the Szgany and the Slovaks of whom the Count had spoken were coming.', sfx: (g) => g.sound.song() },
+        { text: 'I ran from the place and gained the Count’s room. But at the moment there seemed to come a violent puff of wind, and the door to the winding stair blew to with a shock.', sfx: (g) => g.sound.door() },
+        { text: 'When I ran to push it open, I found that it was hopelessly fast. I was again a prisoner, and the net of doom was closing round me more closely.' },
+      ], () => g.completeScene());
+    });
+  });
+}
+
 export default {
   id: 'chapel',
   title: 'VI · The Chapel',
@@ -168,7 +239,7 @@ export default {
   },
   start: 'dawn',
   keep: ['crucifix'],
-  setup(g) { g.take('lamp'); g.take('notebook'); },
+  setup(g) { g.take('lamp'); g.take('notebook'); g.set('countBox', Math.floor(Math.random() * CRATES.length)); },
 
   onEnter(g) {
     g.say([
@@ -180,8 +251,9 @@ export default {
 
   hint(g) {
     if (g.state.room === 'dawn') return 'The key must be in the Count’s room. The only way there is down the outside wall — through my window.';
-    if (!g.flag('lidUp') && g.state.room !== 'chapel') return 'No key here. The door in the corner leads down a winding stair to the old chapel.';
-    if (!g.flag('lidUp')) return 'The great box against the wall. I must look inside.';
+    if (!g.flag('lidUp') && g.state.room !== 'chapel') return 'No key here — but read the paper on the table. Then take the door in the corner down to the old chapel.';
+    if (!g.flag('nailsSeen')) return 'His box will be the one not yet nailed down. Look at the floor: fresh earth has been tracked from the door to one of the boxes.';
+    if (!g.flag('lidUp')) return 'That box is not nailed. Lift the lid.';
     if (!g.flag('searched')) return 'I must search him for the key, however my senses revolt.';
     if (!g.has('shovel')) return 'The workmen left a shovel by the boxes.';
     return 'There is a terrible thing I could do with that shovel…';
@@ -190,6 +262,7 @@ export default {
   rooms: {
     dawn: {
       draw(ctx, t) { dawnRoom(ctx, t); },
+      haunts: ['wolves', 'whisper'],
       hotspots: [
         {
           id: 'window', x: 115, y: 80, w: 130, h: 230,
@@ -211,6 +284,8 @@ export default {
     },
     countroom: {
       draw(ctx, t, g) { countRoom(ctx, t, g); },
+      haunts: ['slam', 'scratch', 'eyes'],
+      eyes: [[52, 330], [300, 300]],
       hotspots: [
         {
           id: 'gold', x: 220, y: 490, w: 100, h: 60, gx: 270, gy: 525,
@@ -222,7 +297,7 @@ export default {
         },
         {
           id: 'table', x: 140, y: 395, w: 90, h: 40,
-          tap(g) { g.say('The furniture is covered with dust. I looked for the key, but it was not in the lock, and I could not find it anywhere.'); },
+          tap(g) { g.say([{ text: 'The furniture is covered with dust. I looked for the key, but it was not in the lock, and I could not find it anywhere.' }, { text: 'Only a waybill, in a clerk’s hand: “Fifty cases of common earth, to be used for experimental purposes.” His own box he will not let them nail down until the last — he must come and go.' }]); },
         },
         {
           id: 'stair', x: 20, y: 260, w: 64, h: 190, gx: 52, gy: 350,
@@ -232,57 +307,30 @@ export default {
     },
     chapel: {
       draw(ctx, t, g) { chapel(ctx, t, g); },
-      onEnter(g) { if (!g.flag('chSeen')) { g.set('chSeen'); g.say('The great box was in the same place, close against the wall, but the lid was laid on it, not fastened down, with the nails ready in their places to be hammered home.'); } },
+      haunts: ['eyes', 'whisper', 'heart', 'gutter'],
+      eyes: [[60, 300], [300, 280], [180, 360]],
+      onEnter(g) { if (!g.flag('chSeen')) { g.set('chSeen'); g.say('The old chapel. Great wooden boxes stood about, filled with fresh-dug earth, their lids on. In one of them he sleeps. But which?'); } },
       hotspots: [
         {
-          id: 'boxes', x: 10, y: 350, w: 92, h: 120, gx: 55, gy: 400,
-          tap(g) { g.say('Great wooden boxes, fifty of them, filled with fresh-dug earth. The Count is sending them somewhere… to London?'); },
-        },
-        {
-          id: 'shovel', x: 284, y: 370, w: 54, h: 134, gx: 312, gy: 440,
+          id: 'shovel', x: 300, y: 466, w: 50, h: 100, gx: 328, gy: 520,
           show: (g) => !g.has('shovel'),
           tap(g) { g.give('shovel'); g.say('A shovel which the workmen had been using to fill the cases.'); },
         },
-        {
-          id: 'box', x: BOX.x, y: BOX.y - 10, w: BOX.w, h: BOX.h + 16, gx: BOX.x + BOX.w / 2, gy: BOX.y + 20,
+        ...CRATES.map((c, i) => ({
+          id: `crate${i}`, x: c.x, y: c.y - 8, w: c.w, h: c.h + 12, gx: c.x + c.w / 2, gy: c.y + 16,
           tap(g) {
-            if (g.flag('struck')) { g.say('The lid has fallen over again, and hid the horrid thing from my sight.'); return; }
-            if (!g.flag('lidUp')) {
-              g.set('lidUp');
-              g.sound.creak();
-              g.say([
-                { text: 'I raised the lid, and laid it back against the wall; and then I saw something which filled my very soul with horror.' },
-                { text: 'There lay the Count, but looking as if his youth had been half renewed, for the white hair and moustache were changed to dark iron-grey; the mouth was redder than ever, for on the lips were gouts of fresh blood.' },
-                { text: 'It seemed as if the whole awful creature were simply gorged with blood. He lay like a filthy leech, exhausted with his repletion.' },
-              ]);
+            if (i !== g.flag('countBox')) {
+              g.sound.creak(); g.shake = 0.3;
+              const tries = (g.flag('pried') || 0) + 1; g.set('pried', tries);
+              g.say(`No. ${c.n}. ${NAILED[(i + tries) % NAILED.length]}` + (tries >= 2 ? ' The noise of my prying rang through the chapel.' : ''));
+              if (tries >= 2) setTimeout(() => g.haunt(tries % 2 ? 'eyes' : 'whisper'), 600);
               return;
             }
-            g.set('searched');
-            g.say('I shuddered as I bent over to touch him, and every sense in me revolted at the contact; but I had to search, or I was lost. I felt all over the body, but no sign could I find of the key.');
+            countBoxTap(g, c);
           },
-          use: {
-            shovel(g) {
-              if (!g.flag('lidUp')) { g.say('The lid is on the box.'); return; }
-              if (!g.flag('searched')) { g.say('First I must search him for the key.'); return; }
-              g.say([
-                { text: 'There was a mocking smile on the bloated face which seemed to drive me mad. This was the being I was helping to transfer to London. A terrible desire came upon me to rid the world of such a monster.' },
-                { text: 'I lifted the shovel high, and struck, with the edge downward, at the hateful face. But as I did so the head turned, and the eyes fell full upon me, with all their blaze of basilisk horror.', sfx: (g) => g.sound.sting() },
-              ], () => {
-                g.set('struck');
-                g.take('shovel');
-                g.say('The sight seemed to paralyse me, and the shovel turned in my hand and glanced from the face. The lid fell over again, and hid the horrid thing from my sight.', () => {
-                  g.set('lidUp', false);
-                  g.say([
-                    { text: 'As I waited I heard in the distance a gipsy song sung by merry voices coming closer — the Szgany and the Slovaks of whom the Count had spoken were coming.', sfx: (g) => g.sound.song() },
-                    { text: 'I ran from the place and gained the Count’s room. But at the moment there seemed to come a violent puff of wind, and the door to the winding stair blew to with a shock.', sfx: (g) => g.sound.door() },
-                    { text: 'When I ran to push it open, I found that it was hopelessly fast. I was again a prisoner, and the net of doom was closing round me more closely.' },
-                  ], () => g.completeScene());
-                });
-              });
-            },
-          },
-          wrong: (g, item) => (item === 'crucifix' ? 'He does not stir. The crucifix will not open his eyes — nor give me the key.' : null),
-        },
+          use: { shovel(g) { if (i === g.flag('countBox')) strike(g); else g.say('Nailed fast. Not this one.'); } },
+          wrong: (g, item) => (item === 'crucifix' && g.flag('lidUp') && i === g.flag('countBox') ? 'He does not stir. The crucifix will not open his eyes — nor give me the key.' : null),
+        })),
       ],
     },
   },

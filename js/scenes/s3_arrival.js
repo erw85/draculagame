@@ -32,7 +32,51 @@ function bedroom(ctx, t, g) {
   A.candle(ctx, 252, 462, t, 0.9);
 }
 
-function library(ctx, t) {
+// ---------------------------------------------------------------- the Count's map quiz
+const COAST = '5.0,251.9 17.5,256.1 32.5,241.7 45.0,239.6 60.0,245.9 62.5,228.1 73.8,224.7 86.2,230.2 98.8,224.7 115.0,221.8 127.5,222.6 145.0,220.1 153.8,223.0 167.5,215.0 172.5,212.0 182.0,205.6 183.2,195.9 170.0,194.2 161.2,192.9 153.8,192.1 160.0,190.0 167.5,188.7 172.5,180.2 178.8,176.0 187.5,166.2 191.2,149.2 189.5,137.8 180.0,130.2 170.0,128.5 157.5,134.8 152.5,131.4 156.2,120.8 151.3,108.1 150.8,101.8 143.8,96.7 142.5,84.8 145.5,79.7 137.5,72.1 132.5,64.0 123.8,60.6 118.8,57.7 115.0,50.9 112.0,41.6 107.5,25.4 101.3,14.8 97.5,8.5 87.5,0.0 22.5,0.0 7.5,10.6 5.0,29.7 15.0,17.0 27.5,17.0 31.2,25.4 23.8,40.3 18.8,48.8 25.0,57.2 37.5,50.9 57.5,44.5 65.0,46.6 58.8,59.4 62.5,72.1 68.8,80.6 76.2,78.4 72.5,91.2 71.3,108.1 67.5,112.4 57.5,114.5 45.0,116.6 32.5,110.2 36.3,120.8 28.8,135.7 45.0,137.8 46.3,154.8 35.0,163.2 23.8,167.5 15.0,174.7 21.3,184.4 30.0,184.4 41.3,188.7 50.0,185.7 66.3,194.2 73.8,187.4 82.5,186.6 75.0,195.9 71.3,203.5 60.0,203.5 42.5,204.4 34.2,212.0 28.8,222.6 22.5,231.1 15.0,241.7';
+const THAMES = '116.0,180.2 122.5,190.0 132.5,191.6 140.0,192.9 144.5,190.8 150.0,191.2 153.8,192.1 160.0,190.8';
+const RINGS = [{ id: 'purfleet', x: 154, y: 191.6 }, { id: 'exeter', x: 59.3, y: 223.9 }, { id: 'whitby', x: 132.2, y: 64 }];
+
+function mapQuiz(g, onDone) {
+  g.mode = 'puzzle';
+  let wrong = g.flag('quizWrong') || 0;
+  const root = g.overlay(`<div class="ov shorthand mapquiz">
+    <div class="paper">
+      <div class="task">The Count laid his long finger beside the atlas. <i>“Show me where stands the house you have bought for me.”</i><br>Three places on his map are ringed in red ink. Tap the right one.</div>
+      <svg viewBox="0 0 200 262" class="map">
+        <rect x="0" y="0" width="200" height="262" fill="#d9c7a0"/>
+        <polygon points="${COAST}" fill="#ead9b0" stroke="#6b4a2a" stroke-width="0.8"/>
+        <polyline points="${THAMES}" fill="none" stroke="#5a7a9a" stroke-width="1.2"/>
+        <text x="122" y="203" font-size="6" fill="#4a3018" font-style="italic">R. Thames</text>
+        <circle cx="144.5" cy="190.4" r="1.6" fill="#2b1a10"/>
+        <text x="122" y="186" font-size="7" fill="#2b1a10">London</text>
+        <g transform="translate(22,22)"><path d="M0 -12 L3 0 L0 -2 L-3 0 Z" fill="#2b1a10"/><text x="-2.5" y="-14" font-size="6" fill="#2b1a10">N</text></g>
+        ${RINGS.map((r) => `<g data-ring="${r.id}" style="cursor:pointer"><circle cx="${r.x}" cy="${r.y}" r="12" fill="transparent"/><circle cx="${r.x}" cy="${r.y}" r="5" fill="none" stroke="#a3121f" stroke-width="1.4"/></g>`).join('')}
+      </svg>
+      <div class="msg"></div>
+      <div class="row"><button class="btn ghost" data-deeds>Glance at the deeds</button></div>
+    </div>
+  </div>`);
+  const msg = root.querySelector('.msg');
+  root.querySelector('[data-deeds]').addEventListener('click', () => {
+    g.sound.click();
+    msg.innerHTML = '<span style="color:#3a2010">“At Purfleet, on a by-road…” — Purfleet lies on the north bank of the Thames, a little east of London.</span>';
+  });
+  root.querySelectorAll('[data-ring]').forEach((el) => el.addEventListener('click', () => {
+    g.clearOverlay(); g.mode = 'play'; g.renderInventory();
+    if (el.dataset.ring === 'purfleet') { onDone(); return; }
+    wrong++; g.set('quizWrong', wrong);
+    g.sound.stinger(); g.shake = 0.8;
+    if (wrong >= 3) {
+      g.die('His eyes blazed with a red light, and I understood, too late, that a solicitor who does not know his own business is of no use to him at all.');
+      return;
+    }
+    g.say({ who: 'The Count', text: wrong === 1 ? '“No.” His eyes flashed red. “Look again, my friend. You have the papers. Read them.”' : '“Do not play with me.” The red light in his eyes burned steadily now. “Once more.”' },
+      () => mapQuiz(g, onDone));
+  }));
+}
+
+function library(ctx, t, g) {
   A.stoneWall(ctx, 0, 0, 360, 450, { seed: 31, base: '#251d2a' });
   A.bookshelf(ctx, 12, 70, 130, 330, 7);
   A.bookshelf(ctx, 218, 70, 130, 330, 8);
@@ -48,6 +92,7 @@ function library(ctx, t) {
   for (const [x, y] of [[122, 489], [95, 491], [130, 486]]) { ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.stroke(); }
   A.candle(ctx, 165, 496, t, 1);
   A.glow(ctx, 110, 480, 140, '255,160,70', 0.12);
+  if (g && g.flag('countLib')) A.count(ctx, 290, 640, 2.15, { t, eyes: 0.9, shadow: { dx: -95, dy: 0, s: 1.55, a: 0.72, skew: 0.18 } });
 }
 
 function mirrorScene() {
@@ -164,7 +209,7 @@ function mirrorScene() {
       // The Count, behind Jonathan — but not in the glass.
       if (countA > 0) {
         const cx = 92 + lunge * 46 - recoil * 60, s = 2.3 + lunge * 0.4;
-        A.count(ctx, cx, 690, s, { t, alpha: countA * (1 - recoil * 0.3), eyes: phase === 'qte' ? 1 : 0.3 + (1 - recoil) * 0.2, arms: lunge * 0.6 });
+        A.count(ctx, cx, 690, s, { t, alpha: countA * (1 - recoil * 0.3), eyes: phase === 'qte' ? 1 : 0.3 + (1 - recoil) * 0.2, arms: lunge * 0.6, shadow: { dx: 70, s: 1.25, a: 0.35, skew: -0.12 } });
         if (phase === 'qte') {
           ctx.fillStyle = '#d6cfc4';
           ctx.beginPath(); ctx.ellipse(cx + 40 + lunge * 50, 470 - lunge * 10, 9, 13, -0.8, 0, Math.PI * 2); ctx.fill();
@@ -187,6 +232,7 @@ export default {
   title: 'III · The Count’s House',
   chapter: 'Chapter II',
   ambience: 'interior',
+  haunts: ['wolves', 'scratch', 'gutter', 'eyes', 'whisper'],
   intro: {
     date: '5 May. The Castle.',
     text: 'Within, stood a tall old man, clean shaven save for a long white moustache, and clad in black from head to foot. He motioned me in with his right hand with a courtly gesture, saying in excellent English, but with a strange intonation:—\n\n“Welcome to my house! Enter freely and of your own will!”',
@@ -196,7 +242,7 @@ export default {
     text: 'I explored further; doors, doors, doors everywhere, and all locked and bolted. In no place save from the windows in the castle walls is there an available exit.\n\nThe castle is a veritable prison, and I am a prisoner!',
   },
   start: 'bedroom',
-  keep: ['crucifix'],
+  keep: ['crucifix', 'deeds'],
 
   onEnter(g) {
     g.say([
@@ -207,6 +253,7 @@ export default {
 
   hint(g) {
     if (!g.flag('atlas')) return 'The Count keeps a library. I wonder what he has been reading — try the door to the right.';
+    if (!g.flag('quizDone')) return 'Read the deeds of Carfax (tap them twice in your bag): the house is at Purfleet, on the Thames just east of London. Then look at the atlas again.';
     if (!g.flag('howl')) return 'Listen at the window before the night is out.';
     return 'It is nearly morning. I should shave at my glass by the window.';
   },
@@ -229,7 +276,7 @@ export default {
           id: 'mirror', x: 240, y: 180, w: 46, h: 64,
           show: (g) => !g.flag('mirrorGone'),
           tap(g) {
-            if (!g.flag('atlas') || !g.flag('howl')) { g.say('My shaving glass, hung by the window. It is the dead of night — I will shave in the morning. First I would see more of this house.'); return; }
+            if (!g.flag('quizDone') || !g.flag('howl')) { g.say('My shaving glass, hung by the window. It is the dead of night — I will shave in the morning. First I would see more of this house.'); return; }
             g.say('The night has passed. Grey light creeps over the mountains; it is time to shave.', () => g.startChallenge(mirrorScene()));
           },
         },
@@ -248,7 +295,9 @@ export default {
       ],
     },
     library: {
-      draw(ctx, t) { library(ctx, t); },
+      draw(ctx, t, g) { library(ctx, t, g); },
+      haunts: ['whisper', 'gutter', 'slam'],
+      eyes: [[180, 280], [60, 430]],
       onEnter(g) {
         if (!g.flag('libSeen')) { g.set('libSeen'); g.say('The library. The Count is not here, though a book lies open on the sofa.'); }
       },
@@ -268,11 +317,28 @@ export default {
         {
           id: 'atlas', x: 66, y: 474, w: 86, h: 32, gx: 108, gy: 490,
           tap(g) {
+            if (g.flag('quizDone')) { g.say('The atlas, open at England, with its three red rings. Why should he want three places?'); return; }
             g.set('atlas');
             g.say([
               { text: 'One was an atlas, which I found opened naturally at England, as if that map had been much used.' },
-              { text: 'On looking at it I found in certain places little rings marked: one near London on the east side, manifestly where his new estate was situated; the other two were Exeter, and Whitby on the Yorkshire coast.' },
-            ]);
+              { text: 'On looking at it I found in certain places little rings marked in red ink…' },
+            ], () => {
+              g.set('countLib');
+              g.sound.stinger(); g.shake = 0.7; g.fadeA = 0.6;
+              g.say([
+                { text: 'I had not heard him come. He was standing behind me.' },
+                { who: 'The Count', text: '“Aha!” he said; “still at your books? Good!”' },
+                { who: 'The Count', text: '“Come. You have brought me the papers. Show me upon my map where stands the house that you have bought for me.”' },
+              ], () => mapQuiz(g, () => {
+                g.set('quizDone'); g.take('deeds'); g.sound.countVoice();
+                g.say([
+                  { who: 'The Count', text: '“Good. Purfleet.” He took the deeds from my hand, and his fingers were as cold as ice.' },
+                  { who: 'The Count', text: '“Here I am noble; I am boyar; the common people know me, and I am master. But a stranger in a strange land, he is no one; men know him not—and to know not is to care not for.”' },
+                  { who: 'The Count', text: '“We are in Transylvania; and Transylvania is not England. Our ways are not your ways, and there shall be to you many strange things.”' },
+                  { text: 'When I looked up from the map again, he was gone.' },
+                ], () => g.set('countLib', false));
+              }));
+            });
           },
         },
         {

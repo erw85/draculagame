@@ -126,6 +126,13 @@ function ride() {
   const wolves = Array.from({ length: 8 }, (_, i) => ({ a: (i / 8) * Math.PI * 2 + 0.2, j: Math.random() * 0.3, pose: i % 3 === 0 ? 'howl' : 'stand' }));
   let finished = false;
   const sparks = [];
+  // Now and then one wolf breaks from the ring and goes for the horses.
+  let lunge = null, lungeT = 7, strikes = 0;
+  const HORSES = { x: CX - 100, y: CY - 4 };
+  const lungePos = () => {
+    const from = wolfPos(lunge.w), k = Math.min(1, lunge.t / lunge.dur), e = k * k;
+    return { x: from.x + (HORSES.x - from.x) * e, y: from.y + (HORSES.y - from.y) * e };
+  };
   const status = (g) => g.prompt(`Tap the lamp to keep it lit · Blue flames marked: ${marked}/${NEED}`);
   const wolfPos = (w) => {
     const rr = r + w.j * 40;
@@ -134,7 +141,7 @@ function ride() {
 
   return {
     start(g) { status(g); g.sound.pack(); },
-    peek: () => ({ lamp, marked, flame: flame && { x: flame.x, y: flame.y - 10 }, lampPos: LAMP }),
+    peek: () => ({ lamp, marked, flame: flame && { x: flame.x, y: flame.y - 10 }, lampPos: LAMP, lunge: lunge && (() => { const p = lungePos(); return { x: p.x + 10, y: p.y - 20 }; })() }),
     update(dt, g) {
       if (finished) return;
       el += dt;
@@ -162,9 +169,40 @@ function ride() {
       }
       for (const s of sparks) { s.t += dt; s.y -= 30 * dt; }
       while (sparks.length && sparks[0].t > 0.6) sparks.shift();
+      // the lunging wolf
+      lungeT -= dt;
+      if (!lunge && lungeT <= 0 && marked >= 1) {
+        const w = wolves[Math.floor(Math.random() * wolves.length)];
+        lunge = { w, t: 0, dur: 2.4 };
+        g.sound.growl((wolfPos(w).x / A.W) * 1.6 - 0.8, 2.4);
+        g.prompt('A wolf is going for the horses — tap it to beat it back!');
+      }
+      if (lunge) {
+        lunge.t += dt;
+        if (lunge.t >= lunge.dur) {
+          strikes++;
+          lunge = null; lungeT = 4 + Math.random() * 4;
+          lamp = Math.max(0, lamp - 0.4);
+          g.shake = 0.9;
+          g.sound.thud(); g.sound.growl(-0.6, 0.6); g.sound.stinger();
+          if (strikes >= 3) { g.die('A third time the wolves sprang at the horses, and this time they dragged them down. The calèche overturned into the darkness.'); return; }
+          g.prompt(`The wolf struck the horses! They reared, and the lamp swung wildly. (${3 - strikes} more and we are lost)`);
+        }
+      }
     },
     down(x, y, g) {
       if (finished) return;
+      if (lunge) {
+        const p = lungePos();
+        if (Math.hypot(x - (p.x + 10), y - (p.y - 20)) < 48) {
+          // "I shouted and beat the side of the calèche"
+          lunge = null; lungeT = 5 + Math.random() * 4;
+          g.sound.thud(); g.sound.thud(0.12);
+          g.shake = 0.3;
+          status(g);
+          return;
+        }
+      }
       if (Math.hypot(x - LAMP.x, y - LAMP.y) < 42) {
         lamp = Math.min(1, lamp + 0.24);
         g.sound.click();
@@ -207,7 +245,7 @@ function ride() {
     },
     draw(ctx, t) {
       // wolves behind and in front of the carriage, sorted by depth
-      const ws = wolves.map((w) => ({ w, p: wolfPos(w) })).sort((a, b) => a.p.y - b.p.y);
+      const ws = wolves.filter((w) => !lunge || w !== lunge.w).map((w) => ({ w, p: wolfPos(w) })).sort((a, b) => a.p.y - b.p.y);
       for (const { w, p } of ws) if (p.y < CY - 10) A.wolf(ctx, p.x, p.y + 8, 0.55, { pose: w.pose, flip: p.x > CX + 30, t, eyes: false });
       caleche(ctx, t, { lamp });
       for (const { w, p } of ws) if (p.y >= CY - 10) A.wolf(ctx, p.x, p.y + 8, 0.6, { pose: w.pose, flip: p.x > CX + 30, t, eyes: false });
@@ -222,6 +260,11 @@ function ride() {
         const s = p.y < CY - 10 ? 0.55 : 0.6;
         const [ex, ey] = w.pose === 'howl' ? [19, -104] : [45, -46];
         A.eyesInDark(ctx, p.x + (flip ? -ex : ex) * s, p.y + 8 + ey * s, t, 0.55);
+      }
+      if (lunge) {
+        const p = lungePos(), k = lunge.t / lunge.dur;
+        A.wolf(ctx, p.x, p.y + 8, 0.7 + k * 0.15, { pose: 'stand', flip: p.x > HORSES.x, t, eyeRGB: '255,40,30' });
+        A.glow(ctx, p.x + 10, p.y - 20, 50, '255,30,20', 0.15 + 0.15 * Math.sin(t * 12), true);
       }
       if (flame) blueFlame(ctx, flame.x, flame.y, t, flame.life);
       for (const s of sparks) { ctx.fillStyle = `rgba(255,210,120,${1 - s.t / 0.6})`; ctx.fillRect(s.x, s.y, 2, 2); }
@@ -250,18 +293,19 @@ export default {
     text: 'I must have been asleep, for certainly if I had been fully awake I must have noticed the approach of such a remarkable place. In the gloom the courtyard looked of considerable size…',
   },
   start: 'pass',
-  keep: ['letter', 'crucifix'],
+  keep: ['letter', 'crucifix', 'deeds'],
 
   onEnter(g) {
     g.say([
       { text: 'We plunged into the darkness of the pass. The howling of the wolves grew closer.' },
       { text: 'Suddenly, away on our left, I saw a faint flickering blue flame. The driver saw it at the same moment; he at once checked the horses.' },
       { who: 'How to play', text: 'Tap each blue flame so the driver can mark it. Keep tapping the carriage lamp so it does not go out — the wolves fear the light.' },
+      { who: 'How to play', text: 'If you hear a growl, a wolf is breaking from the ring to attack the horses. Tap it to shout and beat it back.' },
     ], () => g.startChallenge(ride()));
   },
 
   hint() {
-    return 'Tap the lamp on the carriage whenever it dims, and tap each blue flame as soon as it appears. Five flames, and the night will be over.';
+    return 'Keep the lamp lit, tap each blue flame as it appears, and when a wolf growls and charges, tap that wolf at once. Five flames, and the night will be over.';
   },
 
   rooms: {

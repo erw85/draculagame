@@ -12,6 +12,16 @@ export const ITEMS = {
     desc: 'A little gold crucifix on a string of beads. The landlady put it round my neck and said, “For your mother’s sake.”',
     icon: svg('<path d="M12 3v18M7 8h10" stroke="#f0c862" stroke-width="3"/><path d="M12 3v18M7 8h10" stroke="#fff3c4" stroke-width="1"/><circle cx="12" cy="2.5" r="1" fill="#c9a24a"/>'),
   },
+  deeds: {
+    name: 'Deeds of Carfax',
+    desc: 'The papers for the Count’s new estate: “At Purfleet, on a by-road… surrounded by a high wall, of ancient structure, built of heavy stones.” Purfleet lies on the north bank of the Thames, just east of London. Some twenty acres; the estate is called Carfax.',
+    icon: svg('<path d="M5 3h11l3 3v15H5z" fill="#e7d9b8" stroke="#6b4a2a"/><path d="M8 9h8M8 12h8M8 15h5" stroke="#6b4a2a"/><path d="M14 17l2 3 2-3" fill="#9c1420" stroke="#9c1420"/>'),
+  },
+  key: {
+    name: 'Iron key',
+    desc: 'A small iron key that was hidden among the garlic. It must fit the landlady’s dresser.',
+    icon: svg('<circle cx="7" cy="12" r="4" fill="none" stroke="#9aa0a8" stroke-width="2"/><path d="M11 12h10M18 12v3M21 12v3" stroke="#9aa0a8" stroke-width="2"/>'),
+  },
   notebook: {
     name: 'Shorthand notebook',
     desc: 'My notebook, with the shorthand key Mina and I use. The Count cannot read a word of it.',

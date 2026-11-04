@@ -26,6 +26,28 @@ function envelope(ctx, x, y) {
   ctx.restore();
 }
 
+function dresser(ctx, x, y, open) {
+  A.layer(ctx, `dresser|${open}`, x - 4, y - 6, 104, 96, (c) => {
+    const g = c.createLinearGradient(x, 0, x + 96, 0);
+    g.addColorStop(0, '#4a2c16'); g.addColorStop(0.5, '#5e3a1e'); g.addColorStop(1, '#2a180c');
+    c.fillStyle = '#2a180c'; c.fillRect(x - 4, y - 6, 104, 8);
+    c.fillStyle = g; c.fillRect(x, y, 96, 84);
+    A.texture(c, x, y, 96, 84, 0.35, 'overlay', 1);
+    for (const dy of [6, 32, 58]) {
+      c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(x + 6, y + dy, 84, 22);
+      c.fillStyle = '#5a361c'; c.fillRect(x + 7, y + dy + 1, 82, 20);
+      c.fillStyle = '#c9a24a'; c.beginPath(); c.arc(x + 48, y + dy + 11, 2.2, 0, Math.PI * 2); c.fill();
+    }
+    // painted flowers, as on a peasant dresser
+    for (const [fx, fy] of [[x + 20, y + 17], [x + 76, y + 17], [x + 20, y + 69], [x + 76, y + 69]]) {
+      c.fillStyle = '#a3121f'; c.beginPath(); c.arc(fx, fy, 3, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#2a6a3a'; c.fillRect(fx - 6, fy - 1, 4, 2); c.fillRect(fx + 2, fy - 1, 4, 2);
+    }
+    if (open) { c.fillStyle = '#100804'; c.fillRect(x + 7, y + 33, 82, 20); c.fillStyle = '#5a361c'; c.fillRect(x + 4, y + 52, 88, 6); }
+    else { c.fillStyle = '#111'; c.fillRect(x + 47, y + 39, 2, 4); }
+  });
+}
+
 function garlic(ctx, x, y) {
   ctx.strokeStyle = '#6a5a3a'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 60); ctx.stroke();
@@ -40,6 +62,7 @@ export default {
   title: 'I · Bistritz',
   chapter: 'Chapter I',
   ambience: 'inn',
+  haunts: ['bell', 'wolves', 'gutter', 'whisper'],
   intro: {
     date: '3 May. Bistritz.',
     text: 'Count Dracula had directed me to go to the Golden Krone Hotel, which I found, to my great delight, to be thoroughly old-fashioned, for of course I wanted to see all I could of the ways of the country. I was evidently expected…',
@@ -62,6 +85,8 @@ export default {
   hint(g) {
     if (!g.has('letter')) return 'Someone has left a letter for me. Perhaps on the table?';
     if (!g.has('crucifix')) return 'The landlady seems anxious to speak with me.';
+    if (!g.has('deeds') && !g.has('key')) return 'She has locked my papers in the dresser. The key must be hidden somewhere a superstitious woman would trust: among her charms by the window?';
+    if (!g.has('deeds')) return 'Use the iron key on the dresser.';
     if (!g.flag('packed')) return 'I should pack my bag for the journey.';
     return 'All is ready. The coach waits beyond the door.';
   },
@@ -77,6 +102,7 @@ export default {
         A.door(ctx, 20, 236, 78, 196, { seed: 9 });
         A.floor(ctx, 432, '#2a170d');
         A.glow(ctx, 290, 400, 230, '255,150,60', 0.2);
+        dresser(ctx, 234, 300, g.flag('drawerOpen'));
         A.table(ctx, 178, 422, 150, { cloth: '#5a1a16' });
         A.candle(ctx, 300, 420, t, 1.1);
         if (!g.has('letter')) envelope(ctx, 220, 412);
@@ -92,7 +118,11 @@ export default {
         },
         {
           id: 'garlic', x: 178, y: 92, w: 28, h: 72, hidden: true,
-          tap(g) { g.say('A string of garlic hangs by the window. The people here seem to put great faith in it.'); },
+          tap(g) {
+            if (!g.flag('ladyGone') || g.has('key') || g.flag('drawerOpen')) { g.say('A string of garlic hangs by the window. The people here seem to put great faith in it.'); return; }
+            g.give('key');
+            g.say('A string of garlic… and tucked among the bulbs, where no thief would put his hand, a small iron key!');
+          },
         },
         {
           id: 'letter', x: 195, y: 392, w: 52, h: 36, gx: 220, gy: 410,
@@ -125,11 +155,30 @@ export default {
               g.give('crucifix');
               g.set('ladyGone');
               g.sound.door();
-              g.say('She put the rosary round my neck and went out of the room. It is all very ridiculous — and yet I do not feel comfortable.');
+              g.say([
+                { text: 'She put the rosary round my neck. Then, at the door, she turned.' },
+                L('“Your papers I have locked away, young Herr. In the morning you will thank me.”'),
+                { text: 'And she went out of the room, taking — I supposed — the key. Without the deeds to the Count’s new house, my journey is pointless.' },
+              ]);
             });
           },
           use: {
             letter(g) { g.say([L('She would not even look at the letter. She only crossed herself.')]); },
+          },
+        },
+        {
+          id: 'dresser', x: 234, y: 296, w: 96, h: 88, gx: 282, gy: 342,
+          tap(g) {
+            if (g.flag('drawerOpen')) {
+              if (!g.has('deeds')) { g.give('deeds'); g.say('My papers: the deeds of Carfax, the estate the Count has bought near London. I must deliver them to him.'); }
+              else g.say('The drawer is empty now.');
+              return;
+            }
+            if (!g.flag('ladyGone')) { g.say('A painted dresser. The middle drawer is locked.'); return; }
+            g.say('The middle drawer is locked. My papers are in there. Where would a careful old woman hide a key, in a house full of charms against evil?');
+          },
+          use: {
+            key(g) { g.take('key'); g.set('drawerOpen'); g.sound.creak(); g.give('deeds'); g.say('The key turned stiffly. Inside lay my papers: the deeds of Carfax, the estate the Count has bought near London.'); },
           },
         },
         {
@@ -138,6 +187,7 @@ export default {
             if (g.flag('packed')) { g.say('My bag is packed and ready.'); return; }
             if (!g.has('letter')) { g.say('My travelling bag. I had better find out the Count’s instructions before I pack.'); return; }
             if (!g.has('crucifix')) { g.say('I could pack now… but the landlady keeps looking at me as if she wants to say something.'); return; }
+            if (!g.has('deeds')) { g.say('I cannot leave without my papers. The Count is expecting the deeds to his new house.'); return; }
             g.set('packed');
             g.sound.thud();
             g.say('I packed my bag. The diligence for Bukovina will leave soon.');
@@ -147,7 +197,7 @@ export default {
           id: 'door', x: 20, y: 236, w: 78, h: 196, gx: 59, gy: 330,
           tap(g) {
             if (!g.flag('packed')) {
-              g.say(g.has('letter') && g.has('crucifix') ? 'I cannot leave without my bag.' : 'I am not ready to leave yet.');
+              g.say(g.has('letter') && g.has('crucifix') && g.has('deeds') ? 'I cannot leave without my bag.' : 'I am not ready to leave yet.');
               return;
             }
             g.sound.door();
