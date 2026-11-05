@@ -1,5 +1,6 @@
 import { Game } from './engine/game.js';
 import { SCENES } from './scenes/index.js';
+import prologue from './scenes/s0_prologue.js';
 import * as A from './art/draw.js';
 
 // Title screen backdrop: Castle Dracula on its crag, a wolf howling at the moon.
@@ -15,7 +16,7 @@ function drawTitle(ctx, t) {
   A.wolf(ctx, 272, 520, 0.75, { pose: 'howl', t, color: '#030105' });
 }
 
-const game = new Game({ scenes: SCENES, drawTitle });
+const game = new Game({ scenes: SCENES, prologue, drawTitle });
 game.boot();
 
 // Lets automated tests reach the game. Harmless in normal play.

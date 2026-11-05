@@ -23,6 +23,7 @@ deploy from branch, root folder).
 
 | # | Chapter | Gameplay |
 |---|---|---|
+| – | Prologue | Who Jonathan Harker is and why he is sent to the Count: Exeter, Mr. Hawkins' letter, Mina, the train journey east (skippable from the title screen) |
 | I | Bistritz | Get the Count's letter and the crucifix; find the hidden key to the drawer where the landlady locked your papers |
 | II | The Borgo Pass | Keep the lamp lit, mark the blue flames, and beat back wolves that lunge at the horses |
 | III | The Count's House | The Count appears and quizzes you on his map (use the deeds); then the shaving mirror |

@@ -9,8 +9,9 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export class Game {
-  constructor({ scenes, drawTitle }) {
+  constructor({ scenes, prologue, drawTitle }) {
     this.scenes = scenes;
+    this.prologue = prologue; // played before chapter I, as scene index -1
     this.drawTitle = drawTitle;
     this.stage = document.getElementById('stage');
     this.canvas = document.getElementById('game');
@@ -189,13 +190,13 @@ export class Game {
   }
 
   // ------------------------------------------------------------ scenes
-  get scene() { return this.state ? this.scenes[this.state.scene] : null; }
+  get scene() { return this.state ? (this.state.scene === -1 ? this.prologue : this.scenes[this.state.scene]) : null; }
   room() { return this.scene.rooms[this.state.room]; }
   visible(h) { return h.show ? h.show(this) : true; }
 
-  newGame() {
+  newGame(skipPrologue = false) {
     this.state = { scene: 0, room: null, inv: [], flags: {}, hints: HINTS_PER_CHAPTER, selected: null };
-    this.startScene(0, true);
+    this.startScene(this.prologue && !skipPrologue ? -1 : 0, true);
   }
 
   continueGame() {
@@ -564,12 +565,14 @@ export class Game {
       <div class="menu">
         ${cont}
         <button class="btn ${this.saved ? 'ghost' : ''}" data-a="new">${this.saved ? 'New Journal' : 'Begin'}</button>
+        ${this.prologue ? '<button class="btn ghost" data-a="skip">Begin at Bistritz (skip prologue)</button>' : ''}
         <button class="btn ghost" data-a="sound">Sound: ${this.sound.muted ? 'Off' : 'On'}</button>
         <div class="credit">After Bram Stoker’s <i>Dracula</i> (1897)</div>
       </div>
     </div>`, {
       cont: () => { this.clearOverlay(); this.continueGame(); },
       new: () => { this.clearOverlay(); this.newGame(); },
+      skip: () => { this.clearOverlay(); this.newGame(true); },
       sound: (b) => { this.toggleMute(); b.textContent = `Sound: ${this.sound.muted ? 'Off' : 'On'}`; },
     });
     // A howl greets the player once audio is allowed.
@@ -596,7 +599,11 @@ export class Game {
     </div>`, {
       resume: () => { this.clearOverlay(); this.mode = prevMode; },
       sound: (b) => { this.toggleMute(); b.textContent = `Sound: ${this.sound.muted ? 'Off' : 'On'}`; },
-      journal: () => { this.clearOverlay(); this.showJournal(this.scene.intro, this.scene.chapter, () => {}); },
+      journal: () => {
+        this.clearOverlay();
+        if (this.scene.intro) this.showJournal(this.scene.intro, this.scene.chapter, () => {});
+        else this.mode = prevMode;
+      },
       restart: () => { this.clearOverlay(); this.state = clone(this.checkpoint); this.enterScene(false); },
       title: () => this.showTitle(),
     });
