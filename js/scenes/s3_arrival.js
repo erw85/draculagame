@@ -260,6 +260,14 @@ export default {
 
   rooms: {
     bedroom: {
+      curios: [{
+        curio: 'slivovitz', x: 28, y: 286, w: 28, h: 30, gx: 42, gy: 300,
+        art(ctx) {
+          ctx.fillStyle = '#1e2a20'; ctx.fillRect(37, 296, 10, 14); ctx.fillRect(40, 289, 4, 8);
+          ctx.fillStyle = 'rgba(200,230,200,.35)'; ctx.fillRect(38, 298, 2, 10);
+          ctx.fillStyle = '#6a4a2a'; ctx.fillRect(40, 287, 4, 3);
+        },
+      }],
       draw(ctx, t, g) { bedroom(ctx, t, g); },
       hotspots: [
         {
@@ -295,6 +303,16 @@ export default {
       ],
     },
     library: {
+      curios: [{
+        curio: 'lawlist', x: 24, y: 448, w: 40, h: 26, gx: 44, gy: 462,
+        art(ctx) {
+          ctx.save(); ctx.translate(44, 464); ctx.rotate(0.15);
+          ctx.fillStyle = '#5a1a16'; ctx.fillRect(-12, -5, 24, 10);
+          ctx.fillStyle = '#e7d9b8'; ctx.fillRect(-11, 3, 22, 2);
+          ctx.fillStyle = '#c9a24a'; ctx.fillRect(-4, -2, 8, 3);
+          ctx.restore();
+        },
+      }],
       draw(ctx, t, g) { library(ctx, t, g); },
       haunts: ['whisper', 'gutter', 'slam'],
       eyes: [[180, 280], [60, 430]],

@@ -48,6 +48,16 @@ export default {
 
   rooms: {
     ledge: {
+      curios: [{
+        curio: 'wagons', x: 176, y: 546, w: 70, h: 26, gx: 210, gy: 560,
+        art(ctx, t) {
+          for (const [wx, ph] of [[196, 0], [222, 1]]) {
+            ctx.fillStyle = '#0a0610'; ctx.fillRect(wx - 7, 556, 14, 6);
+            ctx.beginPath(); ctx.arc(wx - 4, 563, 2, 0, Math.PI * 2); ctx.arc(wx + 4, 563, 2, 0, Math.PI * 2); ctx.fill();
+            A.glow(ctx, wx + 8, 557, 6, '255,170,80', 0.6 + 0.2 * Math.sin(t * 5 + ph), true);
+          }
+        },
+      }],
       draw(ctx, t) { ledge(ctx, t); },
       hotspots: [
         {

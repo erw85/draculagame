@@ -36,6 +36,10 @@ While you explore, the castle does unsettling things at random: guttering candle
 whispers, a winged shadow at the window, distant slams. Some puzzle answers (the stuck door, the
 Count's box) change each game.
 
+Ten **curiosities** from the novel are hidden in quiet corners (a polyglot dictionary, the driver's
+flask of slivovitz, a Szekely war-banner…). They only glint now and then. The collection is kept
+across playthroughs, and the end of the act shows your record (curiosities, deaths, hints) and a rank.
+
 Failing a danger moment shows a death card; "Rise Again" restarts that chapter.
 Progress saves automatically at the start of each chapter. Each chapter has
 three hints.

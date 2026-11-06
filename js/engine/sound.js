@@ -528,6 +528,23 @@ export class Sound {
     });
   }
 
+  // A shimmer of small bells, for finding a curiosity.
+  discover() {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const { g } = this._out(0, 0.5);
+    g.gain.value = 0.5;
+    [1046.5, 1318.5, 1568, 2093, 1568, 2637].forEach((f, i) => {
+      const t = ctx.currentTime + i * 0.07;
+      for (const [m, a] of [[1, 0.12], [2.76, 0.03]]) {
+        const o = this._osc('sine', f * m), og = ctx.createGain();
+        o.connect(og); og.connect(g);
+        this._env(og, t, 0.004, a, 0.9);
+        o.start(t); o.stop(t + 1);
+      }
+    });
+  }
+
   // ---------- dread ----------
   // Unintelligible whispering: breathy noise shaped into syllables.
   whisper(pan = 0, loud = 0.5) {

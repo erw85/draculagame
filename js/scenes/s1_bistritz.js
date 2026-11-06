@@ -79,6 +79,7 @@ export default {
       { who: 'How to play', text: 'Tap anything that glimmers to examine it or pick it up.' },
       { who: 'How to play', text: 'Items you carry appear below. Tap one to select it, then tap something in the scene to use it there. Tap a selected item again to read about it.' },
       { who: 'How to play', text: 'Stuck? The ? button gives a hint — but only three per chapter.' },
+      { who: 'How to play', text: 'Ten curiosities from the novel are hidden around the castle, with only a faint, occasional glint to give them away. Find them for a better rank at the end of the act.' },
     ]);
   },
 
@@ -93,6 +94,28 @@ export default {
 
   rooms: {
     inn: {
+      curios: [
+        {
+          curio: 'dictionary', x: 102, y: 540, w: 40, h: 28, gx: 122, gy: 554,
+          art(ctx) {
+            ctx.save(); ctx.translate(122, 556); ctx.rotate(-0.25);
+            ctx.fillStyle = '#2a3a26'; ctx.fillRect(-10, -6, 20, 12);
+            ctx.fillStyle = '#e7d9b8'; ctx.fillRect(-9, 4, 18, 2);
+            ctx.fillStyle = '#c9a24a'; ctx.fillRect(-6, -3, 12, 1); ctx.fillRect(-6, 0, 12, 1);
+            ctx.restore();
+          },
+        },
+        {
+          curio: 'recipe', x: 306, y: 396, w: 30, h: 26, gx: 321, gy: 410,
+          art(ctx) {
+            ctx.save(); ctx.translate(321, 412); ctx.rotate(0.2);
+            ctx.fillStyle = '#efe6cf'; ctx.fillRect(-8, -5, 16, 10);
+            ctx.strokeStyle = 'rgba(80,50,30,.6)'; ctx.lineWidth = 0.6;
+            ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.moveTo(-6, -2); ctx.lineTo(-2, -2); ctx.moveTo(2, 1); ctx.lineTo(6, 1); ctx.stroke();
+            ctx.restore();
+          },
+        },
+      ],
       draw(ctx, t, g) {
         A.woodWall(ctx, 0, 0, 360, 432, { seed: 4, base: '#3b2416' });
         ctx.fillStyle = '#1c100a'; ctx.fillRect(0, 56, 360, 14);

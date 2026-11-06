@@ -283,6 +283,15 @@ export default {
       ],
     },
     countroom: {
+      curios: [{
+        curio: 'jewels', x: 188, y: 390, w: 32, h: 20, gx: 204, gy: 401,
+        art(ctx) {
+          ctx.strokeStyle = '#b08a30'; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.ellipse(204, 404, 10, 3.5, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = '#8a0e18'; ctx.beginPath(); ctx.arc(213, 404, 2, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#2a6a5a'; ctx.beginPath(); ctx.arc(196, 403, 1.6, 0, Math.PI * 2); ctx.fill();
+        },
+      }],
       draw(ctx, t, g) { countRoom(ctx, t, g); },
       haunts: ['slam', 'scratch', 'eyes'],
       eyes: [[52, 330], [300, 300]],
@@ -306,6 +315,17 @@ export default {
       ],
     },
     chapel: {
+      curios: [{
+        curio: 'hammer', x: 36, y: 468, w: 50, h: 28, gx: 60, gy: 482,
+        art(ctx) {
+          ctx.save(); ctx.translate(60, 484); ctx.rotate(-0.4);
+          ctx.fillStyle = '#5a3a1e'; ctx.fillRect(-12, -1.5, 22, 3);
+          ctx.fillStyle = '#6a6a72'; ctx.fillRect(8, -5, 6, 10);
+          ctx.restore();
+          ctx.strokeStyle = '#8a8a90'; ctx.lineWidth = 0.8;
+          for (const [nx, ny] of [[44, 490], [48, 488], [78, 489]]) { ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(nx + 5, ny + 1); ctx.stroke(); }
+        },
+      }],
       draw(ctx, t, g) { chapel(ctx, t, g); },
       haunts: ['eyes', 'whisper', 'heart', 'gutter'],
       eyes: [[60, 300], [300, 280], [180, 360]],

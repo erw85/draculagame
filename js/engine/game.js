@@ -1,6 +1,7 @@
 import { W, H, vignette, fog, sparkle, bat, glow } from '../art/draw.js';
 import { Bats } from '../art/bats.js';
 import { ITEMS } from '../items.js';
+import { CURIOS, CURIO_IDS } from '../curios.js';
 import { Sound } from './sound.js';
 import * as save from './save.js';
 
@@ -48,6 +49,9 @@ export class Game {
     const saved = save.load();
     this.saved = saved && saved.checkpoint ? saved : null;
     this.sound.muted = !!(saved && saved.muted);
+    // Curiosities found in any playthrough, and this playthrough's record.
+    this.collection = new Set((saved && saved.curios) || []);
+    this.run = (saved && saved.checkpoint && saved.run) || null;
   }
 
   // ------------------------------------------------------------ boot & loop
@@ -162,8 +166,16 @@ export class Game {
     const showSpots = !this.challenge || this.challenge.showHotspots;
     if (showSpots && this.mode === 'play') {
       const sel = !!this.state.selected;
-      room.hotspots.forEach((h, i) => {
-        if (!this.visible(h) || h.hidden) return;
+      this.spots(room).forEach((h, i) => {
+        if (!this.visible(h)) return;
+        if (h.art) h.art(ctx, t, this);
+        if (h.curio) {
+          // hidden curiosities only glint now and then
+          const found = this.run && this.run.found.includes(h.curio);
+          if (!found && Math.sin(t * 0.9 + i * 2.1) > 0.92) sparkle(ctx, h.gx ?? h.x + h.w / 2, h.gy ?? h.y + h.h / 2, t * 3, 0.45, '200,220,255');
+          return;
+        }
+        if (h.hidden) return;
         const cx = h.gx ?? h.x + h.w / 2, cy = h.gy ?? h.y + h.h / 2;
         sparkle(ctx, cx, cy, t + i * 1.3, sel ? 0.9 : 0.55);
       });
@@ -195,6 +207,7 @@ export class Game {
   visible(h) { return h.show ? h.show(this) : true; }
 
   newGame(skipPrologue = false) {
+    this.run = { deaths: 0, hints: 0, found: [] };
     this.state = { scene: 0, room: null, inv: [], flags: {}, hints: HINTS_PER_CHAPTER, selected: null };
     this.startScene(this.prologue && !skipPrologue ? -1 : 0, true);
   }
@@ -267,7 +280,7 @@ export class Game {
   }
 
   persist() {
-    save.write({ checkpoint: this.checkpoint, muted: this.sound.muted });
+    save.write({ checkpoint: this.checkpoint, muted: this.sound.muted, curios: [...this.collection], run: this.run });
     this.saved = { checkpoint: this.checkpoint };
   }
 
@@ -288,8 +301,11 @@ export class Game {
   }
 
   // ------------------------------------------------------------ interaction
+  // A room's tappable spots; curiosities go last so they win any overlap.
+  spots(room) { return room.curios ? [...room.hotspots, ...room.curios] : room.hotspots; }
+
   tapScene(x, y) {
-    const hs = this.room().hotspots;
+    const hs = this.spots(this.room());
     for (let i = hs.length - 1; i >= 0; i--) {
       const h = hs[i];
       if (!this.visible(h)) continue;
@@ -301,7 +317,8 @@ export class Game {
           const fn = h.use && h.use[sel];
           if (fn) fn(this);
           else this.say((h.wrong && h.wrong(this, sel)) || `The ${ITEMS[sel].name.toLowerCase()} is no use there.`);
-        } else if (h.tap) h.tap(this);
+        } else if (h.curio) this.findCurio(h.curio, h);
+        else if (h.tap) h.tap(this);
         return;
       }
     }
@@ -351,6 +368,7 @@ export class Game {
     if (this.textActive()) return;
     if (this.state.hints <= 0) { this.say('No hints remain for this chapter. Trust your own wits.'); return; }
     this.state.hints--;
+    if (this.run) { this.run.hints++; this.persist(); }
     this.updateHintCount();
     const h = this.scene.hint ? this.scene.hint(this) : 'Look about you. Tap whatever glimmers.';
     this.say({ who: 'A thought', text: h });
@@ -401,6 +419,44 @@ export class Game {
 
   hideText() { this.el.textbox.classList.add('hidden'); this.typing = null; this.countTalking = false; }
 
+  // ------------------------------------------------------------ curiosities
+  findCurio(id, h) {
+    const c = CURIOS[id];
+    if (!this.run) this.run = { deaths: 0, hints: 0, found: [] };
+    const isNew = !this.run.found.includes(id);
+    if (isNew) {
+      this.run.found.push(id);
+      const firstEver = !this.collection.has(id);
+      this.collection.add(id);
+      this.persist();
+      this.sound.discover();
+      const x = h ? (h.gx ?? h.x + h.w / 2) : W / 2, y = h ? (h.gy ?? h.y + h.h / 2) : H / 2;
+      this.fx.push({ kind: 'burst', x, y, t: 0, dur: 1.2 });
+      this.toast(`Curiosity found: ${c.name} · ${this.run.found.length}/${CURIO_IDS.length}${firstEver ? '' : ' (seen before)'}`);
+    }
+    this.say({ who: c.name, text: c.text });
+  }
+
+  toast(text) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
+
+  showCurios(back) {
+    const rows = CURIO_IDS.map((id) => {
+      const c = CURIOS[id], got = this.collection.has(id);
+      return `<div class="curio ${got ? 'got' : ''}"><div class="cn">${got ? esc(c.name) : '? ? ?'}<span>Chapter ${c.chapter}</span></div>${got ? `<div class="ct">${esc(c.text)}</div>` : ''}</div>`;
+    }).join('');
+    this.overlay(`<div class="ov curios-ov">
+      <h2>Curiosities</h2>
+      <div class="sub">${this.collection.size} of ${CURIO_IDS.length} found, in all your journeys. They hide in quiet corners: look for a faint glint.</div>
+      <div class="list">${rows}</div>
+      <button class="btn" data-a="back">Back</button>
+    </div>`, { back });
+  }
+
   // ------------------------------------------------------------ dread
   haunt(kind) {
     const s = this.sound, r = Math.random, pan = r() * 1.6 - 0.8;
@@ -445,6 +501,13 @@ export class Game {
         ctx.save(); ctx.globalAlpha = 0.6 * Math.sin(Math.PI * p);
         bat(ctx, x, f.y + Math.sin(p * 6) * 12, 7, t * 9, '#000');
         ctx.restore();
+      } else if (f.kind === 'burst') {
+        for (let i = 0; i < 18; i++) {
+          const a = (i / 18) * Math.PI * 2, d = 6 + p * 46;
+          ctx.fillStyle = `rgba(255,${210 + (i % 3) * 15},140,${1 - p})`;
+          ctx.fillRect(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d - p * 10, 2.2, 2.2);
+        }
+        glow(ctx, f.x, f.y, 40 * (1 - p) + 10, '255,220,150', 0.5 * (1 - p), true);
       } else if (f.kind === 'dust') {
         ctx.fillStyle = `rgba(200,190,180,${0.6 * (1 - p)})`;
         for (let i = 0; i < 40; i++) {
@@ -483,6 +546,7 @@ export class Game {
   }
 
   die(text) {
+    if (this.run && this.mode !== 'dead') { this.run.deaths++; this.persist(); }
     if (this.mode === 'dead') return;
     this.mode = 'dead';
     this.challenge = null;
@@ -566,6 +630,7 @@ export class Game {
         ${cont}
         <button class="btn ${this.saved ? 'ghost' : ''}" data-a="new">${this.saved ? 'New Journal' : 'Begin'}</button>
         ${this.prologue ? '<button class="btn ghost" data-a="skip">Begin at Bistritz (skip prologue)</button>' : ''}
+        ${this.collection.size ? `<button class="btn ghost" data-a="curios">Curiosities (${this.collection.size}/${CURIO_IDS.length})</button>` : ''}
         <button class="btn ghost" data-a="sound">Sound: ${this.sound.muted ? 'Off' : 'On'}</button>
         <div class="credit">After Bram Stoker’s <i>Dracula</i> (1897)</div>
       </div>
@@ -573,6 +638,7 @@ export class Game {
       cont: () => { this.clearOverlay(); this.continueGame(); },
       new: () => { this.clearOverlay(); this.newGame(); },
       skip: () => { this.clearOverlay(); this.newGame(true); },
+      curios: () => this.showCurios(() => this.showTitle()),
       sound: (b) => { this.toggleMute(); b.textContent = `Sound: ${this.sound.muted ? 'Off' : 'On'}`; },
     });
     // A howl greets the player once audio is allowed.
@@ -582,7 +648,7 @@ export class Game {
   toggleMute() {
     this.sound.setMuted(!this.sound.muted);
     if (this.checkpoint) this.persist();
-    else save.write({ ...(save.load() || {}), muted: this.sound.muted });
+    else save.write({ ...(save.load() || {}), muted: this.sound.muted, curios: [...this.collection] });
   }
 
   showMenu() {
@@ -594,6 +660,7 @@ export class Game {
       <button class="btn" data-a="resume">Resume</button>
       <button class="btn ghost" data-a="sound">Sound: ${this.sound.muted ? 'Off' : 'On'}</button>
       <button class="btn ghost" data-a="journal">Reread Journal</button>
+      <button class="btn ghost" data-a="curios">Curiosities (${this.run ? this.run.found.length : 0}/${CURIO_IDS.length} this journey)</button>
       <button class="btn ghost" data-a="restart">Restart Chapter</button>
       <button class="btn ghost" data-a="title">Title Screen</button>
     </div>`, {
@@ -604,6 +671,7 @@ export class Game {
         if (this.scene.intro) this.showJournal(this.scene.intro, this.scene.chapter, () => {});
         else this.mode = prevMode;
       },
+      curios: () => this.showCurios(() => { this.clearOverlay(); this.mode = prevMode; }),
       restart: () => { this.clearOverlay(); this.state = clone(this.checkpoint); this.enterScene(false); },
       title: () => this.showTitle(),
     });
@@ -614,15 +682,32 @@ export class Game {
     this.challenge = null;
     this.el.topbar.classList.add('hidden');
     this.el.inv.classList.add('hidden');
-    save.write({ muted: this.sound.muted });
+    save.write({ muted: this.sound.muted, curios: [...this.collection] });
     this.saved = null;
     this.sound.pack();
+    const r = this.run || { deaths: 0, hints: 0, found: [] };
+    const score = 40 + r.found.length * 8 - r.deaths * 4 - r.hints * 2;
+    const rank = score >= 100 ? ['Vampire Hunter', 'The Count will remember you.']
+      : score >= 80 ? ['Bold Englishman', 'Mr. Hawkins chose well.']
+        : score >= 60 ? ['Faithful Clerk of Exeter', 'Discreet and silent, and still alive.']
+          : score >= 40 ? ['Survivor of the Castle', 'You escaped. Most do not.']
+            : ['Prisoner of the Count', 'He let you go. Ask yourself why.'];
     this.overlay(`<div class="ov ending">
       <h1>End of Act I</h1>
+      <div class="record">
+        <div class="rank">${rank[0]}</div>
+        <div class="rank-sub">${rank[1]}</div>
+        <div class="stats">
+          <div><b>${r.found.length}<small>/${CURIO_IDS.length}</small></b><span>curiosities</span></div>
+          <div><b>${r.deaths}</b><span>${r.deaths === 1 ? 'death' : 'deaths'}</span></div>
+          <div><b>${r.hints}</b><span>hints used</span></div>
+        </div>
+      </div>
       <p class="teaser">Jonathan Harker’s fate on the castle wall is unknown…<br><br>
       Far away, by the sea at Whitby, Mina Murray waits for a letter that does not come.</p>
       <p class="teaser"><b>Act II: Mina Murray’s Journal</b><br>coming soon</p>
       <button class="btn" data-a="title">Return to Title</button>
+      ${r.found.length < CURIO_IDS.length ? '<div class="sub">Some curiosities are still hidden in the castle. Play again to find them.</div>' : ''}
     </div>`, { title: () => this.showTitle() });
   }
 }

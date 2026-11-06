@@ -309,3 +309,46 @@ button {
 
 /* the Count's map */
 .mapquiz .map { width: 100%; height: auto; display: block; margin: .3em 0; border: 1px solid rgba(80, 40, 20, .5); box-shadow: inset 0 0 20px rgba(110, 70, 30, .4); }
+
+/* curiosity found */
+#toast {
+  position: absolute; left: 50%; top: 3.4em;
+  transform: translate(-50%, -1em);
+  max-width: 92%;
+  padding: .45em .9em;
+  font-size: .9em;
+  color: #2b1a10;
+  background: linear-gradient(#f4e8c8, #d8c08a);
+  border: 1px solid #8a6a2a;
+  border-radius: .3em;
+  box-shadow: 0 0 18px rgba(255, 210, 120, .6);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { animation: toast 3.2s ease-out forwards; }
+@keyframes toast {
+  0% { opacity: 0; transform: translate(-50%, -1em); }
+  10%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); }
+}
+
+/* collection */
+.curios-ov { background: rgba(3, 1, 6, .94); justify-content: flex-start; padding: 1.2em .9em; }
+.curios-ov h2 { font-family: var(--display); font-weight: normal; font-size: 2em; margin: 0; color: #d9c4ea; }
+.curios-ov .sub, .ending .sub { font-size: .8em; color: #9f8fb8; margin: .2em 0 .7em; font-style: italic; }
+.curios-ov .list { flex: 1; width: 100%; overflow-y: auto; text-align: left; margin-bottom: .6em; }
+.curio { padding: .45em .6em; margin-bottom: .35em; border: 1px solid rgba(200, 170, 230, .15); border-radius: .25em; background: rgba(30, 14, 36, .6); }
+.curio .cn { font-size: .95em; color: #6f6080; display: flex; justify-content: space-between; }
+.curio .cn span { font-size: .75em; font-style: italic; }
+.curio.got .cn { color: #f0d9a0; }
+.curio .ct { font-size: .78em; line-height: 1.35; color: #d8cce6; margin-top: .25em; }
+
+/* end-of-act record */
+.ending .record { margin: .6em 0 .2em; padding: .7em 1em; border: 1px solid rgba(200, 160, 90, .4); border-radius: .3em; background: rgba(40, 20, 10, .5); }
+.ending .rank { font-family: var(--display); font-size: 1.7em; color: #f0d9a0; text-shadow: 0 0 12px rgba(255, 180, 80, .5); }
+.ending .rank-sub { font-style: italic; color: #cbb9a0; font-size: .9em; margin-bottom: .5em; }
+.ending .stats { display: flex; justify-content: center; gap: 1.2em; }
+.ending .stats div { display: flex; flex-direction: column; align-items: center; font-size: .85em; color: #bfaed6; }
+.ending .stats b { font-size: 1.5em; color: #ead9f2; }
+.ending .stats b small { font-size: .55em; color: #9f8fb8; }

@@ -344,6 +344,18 @@ export default {
 
   rooms: {
     chamber: {
+      curios: [{
+        curio: 'letters', x: 62, y: 456, w: 42, h: 30, gx: 83, gy: 470, show: (g) => g.flag('written'),
+        art(ctx) {
+          for (const [dx, r] of [[-6, -0.3], [4, 0.2]]) {
+            ctx.save(); ctx.translate(83 + dx, 472); ctx.rotate(r);
+            ctx.fillStyle = '#e9dcbf'; ctx.fillRect(-9, -6, 18, 12);
+            ctx.strokeStyle = 'rgba(40,25,15,.6)'; ctx.lineWidth = 0.6;
+            for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-7, -3 + i * 2.5); ctx.lineTo(6, -3 + i * 2.5); ctx.stroke(); }
+            ctx.restore();
+          }
+        },
+      }],
       haunts: ['scratch', 'wolves', 'whisper', 'gutter'],
       eyes: [[60, 210]],
       draw(ctx, t, g) { chamber(ctx, t, g); },
@@ -394,6 +406,15 @@ export default {
     },
 
     wall: {
+      curios: [{
+        curio: 'mountainash', x: 40, y: 496, w: 46, h: 48, gx: 62, gy: 518,
+        art(ctx) {
+          ctx.strokeStyle = '#1c2a18'; ctx.lineWidth = 1.5;
+          for (const [ex, ey] of [[44, 500], [62, 498], [78, 506], [70, 530]]) { ctx.beginPath(); ctx.moveTo(60, 536); ctx.quadraticCurveTo(60, 515, ex, ey); ctx.stroke(); }
+          ctx.fillStyle = '#b0201c';
+          for (const [bx, by] of [[44, 500], [47, 503], [62, 498], [65, 501], [78, 506], [75, 509], [70, 530], [73, 527]]) { ctx.beginPath(); ctx.arc(bx, by, 1.6, 0, Math.PI * 2); ctx.fill(); }
+        },
+      }],
       draw(ctx, t, g) { wallView(ctx, t, g); },
       vignette: 1,
       onEnter(g) {
@@ -418,6 +439,16 @@ export default {
     },
 
     corridor: {
+      curios: [{
+        curio: 'banner', x: 2, y: 46, w: 32, h: 96, gx: 17, gy: 90, show: (g) => g.has('lamp'),
+        art(ctx, t) {
+          const sw = Math.sin(t * 0.8) * 1.5;
+          ctx.fillStyle = '#3a0a10';
+          ctx.beginPath(); ctx.moveTo(6, 52); ctx.lineTo(30, 62); ctx.lineTo(29 + sw, 120); ctx.lineTo(24, 112); ctx.lineTo(19 + sw, 132); ctx.lineTo(14, 116); ctx.lineTo(7 + sw, 128); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 50); ctx.lineTo(32, 62); ctx.stroke();
+          ctx.fillStyle = 'rgba(200,160,70,.55)'; ctx.beginPath(); ctx.arc(18, 84, 5, 0, Math.PI * 2); ctx.fill();
+        },
+      }],
       draw(ctx, t, g) { corridor(ctx, t, g); },
       haunts: ['slam', 'eyes', 'gutter', 'whisper'],
       eyes: [[180, 300], [118, 330], [242, 330]],
